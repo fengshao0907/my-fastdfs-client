@@ -11,10 +11,35 @@
 
 #include "tracker_types.h"
 #include "storage_client.h"
+#include "fdht_types.h"
+#include "fdht_client.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+typedef struct tagMyClientContext
+{
+	struct FastDFSContext {
+		TrackerServerGroup tracker_group;
+	} fdfs;
+
+	struct FastDHTContext {
+		GroupArray group_array;
+		bool keep_alive;
+	} fdht;
+} MyClientContext;
+
+/*
+client init function
+param:
+        fastdfs_conf_filename: FastDFS client config filename
+        fastdht_conf_filename: FastDHT client config filename
+return: 0 for success, != 0 for fail (errno)
+*/
+int my_client_init(MyClientContext *pContext, const char *fastdfs_conf_filename, 
+	const char *fastdht_conf_filename);
+
 
 /**
 * upload file to storage server (by file name)
