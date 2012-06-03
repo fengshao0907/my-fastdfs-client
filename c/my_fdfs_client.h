@@ -47,6 +47,13 @@ int my_client_init(MyClientContext *pContext, const char *fastdfs_conf_filename,
 	const char *fastdht_conf_filename);
 
 
+/*
+client destroy function
+param:
+	pContext : the context to be detroy
+*/
+void my_client_destroy(MyClientContext *pContext);
+
 /**
 * upload file to storage server (by file name)
 * params:

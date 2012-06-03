@@ -54,5 +54,5 @@ install:
 
 	if [ 1 -eq 1 -a $(TARGET_LIB) = "/usr/local/lib" ]; then sh ./fdfs_link_library.sh; fi
 clean:
-	rm -f $(ALL_OBJS) $(ALL_PRGS) $(ALL_LIBS)
+	rm -f $(ALL_OBJS) $(ALL_PRGS) $(ALL_LIBS) libmyfdfsclient.so
 

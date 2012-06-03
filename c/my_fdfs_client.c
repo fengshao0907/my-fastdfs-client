@@ -22,6 +22,14 @@ int my_client_init(MyClientContext *pContext, const char *fastdfs_conf_filename,
 	return 0;
 }
 
+void my_client_destroy(MyClientContext *pContext)
+{
+	tracker_close_all_connections_ex(&(pContext->fdfs.tracker_group));
+	fdfs_client_destroy_ex(&(pContext->fdfs.tracker_group));
+
+	fdht_client_destroy(&(pContext->fdht.group_array));
+}
+
 static void my_fdfs_fill_key_info(FDHTKeyInfo *pKeyInfo, \
 		MyClientContext *pContext, const char *my_file_id)
 {
