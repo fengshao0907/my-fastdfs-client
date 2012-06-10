@@ -1,6 +1,7 @@
 #include "my_fdfs_client.h"
 #include "tracker_client.h"
 #include "storage_client1.h"
+#include "logger.h"
 
 int my_client_init(MyClientContext *pContext, const char *fastdfs_conf_filename, 
 	const char *fastdht_conf_filename)
@@ -48,6 +49,16 @@ static void my_fdfs_fill_key_info(FDHTKeyInfo *pKeyInfo, \
 	memcpy(pKeyInfo->szKey, MY_CLIENT_FILE_ID_KEY_NAME, pKeyInfo->key_len + 1);
 }
 
+#define GET_TRACKER_CONNECTION(pTrackerServer, pContext) \
+	do { \
+	pTrackerServer = tracker_get_connection_ex( \
+					&(pContext->fdfs.tracker_group)); \
+	if (pTrackerServer == NULL) \
+	{ \
+		return errno != 0 ? errno : ECONNREFUSED; \
+	} \
+	} while (0)
+
 int my_fdfs_upload_by_filename_ex(MyClientContext *pContext, \
 		const char *my_file_id, const char cmd, \
 		const char *local_filename, const char *file_ext_name, \
@@ -76,12 +87,7 @@ int my_fdfs_upload_by_filename_ex(MyClientContext *pContext, \
 		return result;
 	}
 
-	pTrackerServer = tracker_get_connection_ex( \
-					&(pContext->fdfs.tracker_group));
-	if (pTrackerServer == NULL)
-	{
-		return errno != 0 ? errno : ECONNREFUSED;
-	}
+	GET_TRACKER_CONNECTION(pTrackerServer, pContext);
 
 	if (group_name == NULL)
 	{
@@ -112,5 +118,449 @@ int my_fdfs_upload_by_filename_ex(MyClientContext *pContext, \
 	}
 
 	return 0;
+}
+
+int my_fdfs_do_upload_file(MyClientContext *pContext, const char *my_file_id, \
+	const char cmd, const int upload_type, const char *file_buff, \
+	void *arg, const int64_t file_size, const char *file_ext_name, \
+	const char *group_name)
+{
+	FDHTKeyInfo keyInfo;
+	char fdfs_file_id[FDFS_GROUP_NAME_MAX_LEN + 128]; \
+	char new_group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
+	char remote_filename[128];
+	char *p;
+	TrackerServerInfo *pTrackerServer;
+	TrackerServerInfo *pStorageServer = NULL;
+	const char *master_filename = NULL;
+	const char *prefix_name = NULL;
+	int value_len;
+	int result;
+
+	my_fdfs_fill_key_info(&keyInfo, pContext, my_file_id);
+	p = fdfs_file_id;
+	value_len = sizeof(fdfs_file_id);
+	result = fdht_get(&keyInfo, &p, &value_len);
+	if (result == 0)
+	{
+		return EEXIST;
+	}
+	else if (result != ENOENT)
+	{
+		return result;
+	}
+
+	GET_TRACKER_CONNECTION(pTrackerServer, pContext);
+
+	if (group_name == NULL)
+	{
+		*new_group_name = '\0';
+	}
+	else
+	{
+		snprintf(new_group_name, sizeof(new_group_name), \
+			"%s", group_name);
+	}
+
+	result = storage_do_upload_file(pTrackerServer, pStorageServer, \
+			0, cmd, upload_type, file_buff, arg, file_size, \
+			master_filename, prefix_name, file_ext_name, NULL, 0, \
+			new_group_name, remote_filename);
+	if (result != 0)
+	{
+		return result;
+	}
+
+	value_len = sprintf(fdfs_file_id, "%s%c%s", new_group_name, \
+			FDFS_FILE_ID_SEPERATOR, remote_filename);
+	if ((result=fdht_set(&keyInfo, FDHT_EXPIRES_NEVER, fdfs_file_id, \
+			value_len)) != 0)
+	{
+		storage_delete_file1(pTrackerServer, pStorageServer, \
+			fdfs_file_id);  //rollback
+		return result;
+	}
+
+	return 0;
+}
+
+int my_fdfs_upload_by_callback_ex(MyClientContext *pContext, \
+		const char *my_file_id, const char cmd, \
+		UploadCallback callback, void *arg, \
+		const int64_t file_size, const char *file_ext_name, \
+		const char *group_name)
+{
+	FDHTKeyInfo keyInfo;
+	char fdfs_file_id[FDFS_GROUP_NAME_MAX_LEN + 128]; \
+	char new_group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
+	char remote_filename[128];
+	char *p;
+	TrackerServerInfo *pTrackerServer;
+	TrackerServerInfo *pStorageServer = NULL;
+	int value_len;
+	int result;
+
+	my_fdfs_fill_key_info(&keyInfo, pContext, my_file_id);
+	p = fdfs_file_id;
+	value_len = sizeof(fdfs_file_id);
+	result = fdht_get(&keyInfo, &p, &value_len);
+	if (result == 0)
+	{
+		return EEXIST;
+	}
+	else if (result != ENOENT)
+	{
+		return result;
+	}
+
+	GET_TRACKER_CONNECTION(pTrackerServer, pContext);
+
+	if (group_name == NULL)
+	{
+		*new_group_name = '\0';
+	}
+	else
+	{
+		snprintf(new_group_name, sizeof(new_group_name), \
+			"%s", group_name);
+	}
+
+	result = storage_upload_by_callback_ex(pTrackerServer, pStorageServer, \
+			0, cmd, callback, arg, file_size, file_ext_name, NULL, \
+			0, new_group_name, remote_filename);
+	if (result != 0)
+	{
+		return result;
+	}
+
+	value_len = sprintf(fdfs_file_id, "%s%c%s", new_group_name, \
+			FDFS_FILE_ID_SEPERATOR, remote_filename);
+	if ((result=fdht_set(&keyInfo, FDHT_EXPIRES_NEVER, fdfs_file_id, \
+			value_len)) != 0)
+	{
+		storage_delete_file1(pTrackerServer, pStorageServer, \
+			fdfs_file_id);  //rollback
+		return result;
+	}
+
+	return 0;
+}
+
+int my_fdfs_delete_file(MyClientContext *pContext, const char *my_file_id)
+{
+	FDHTKeyInfo keyInfo;
+	char fdfs_file_id[FDFS_GROUP_NAME_MAX_LEN + 128];
+	char *p;
+	TrackerServerInfo *pTrackerServer;
+	TrackerServerInfo *pStorageServer = NULL;
+	int result;
+	int value_len;
+
+	my_fdfs_fill_key_info(&keyInfo, pContext, my_file_id);
+	p = fdfs_file_id;
+	value_len = sizeof(fdfs_file_id);
+	if ((result=fdht_get(&keyInfo, &p, &value_len)) != 0)
+	{
+		return result;
+	}
+
+	GET_TRACKER_CONNECTION(pTrackerServer, pContext);
+
+	if ((result=storage_delete_file1 (pTrackerServer, pStorageServer,
+		fdfs_file_id)) == 0)
+	{
+		if (fdht_delete(&keyInfo) != 0)
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"delete key: %s of object: %s fail, " \
+				"errno: %d, error info: %s", __LINE__, \
+				MY_CLIENT_FILE_ID_KEY_NAME, my_file_id, \
+				errno, STRERROR(errno));
+		}
+	}
+
+	return result;
+}
+
+int my_fdfs_get_file_id(MyClientContext *pContext, const char *my_file_id, \
+		char *fdfs_file_id, const int file_id_size)
+{
+	FDHTKeyInfo keyInfo;
+	char *p;
+	int value_len;
+
+	my_fdfs_fill_key_info(&keyInfo, pContext, my_file_id);
+	p = fdfs_file_id;
+	value_len = file_id_size;
+	return fdht_get(&keyInfo, &p, &value_len);
+}
+
+int my_fdfs_do_download_file_ex(MyClientContext *pContext, \
+		const int download_type, const char *my_file_id, \
+		const int64_t file_offset, const int64_t download_bytes, \
+		char **file_buff, void *arg, int64_t *file_size)
+{
+	char fdfs_file_id[FDFS_GROUP_NAME_MAX_LEN + 128]; \
+	TrackerServerInfo *pTrackerServer;
+	TrackerServerInfo *pStorageServer = NULL;
+	int result;
+
+	if ((result=my_fdfs_get_file_id(pContext, my_file_id, fdfs_file_id, \
+		sizeof(fdfs_file_id))) != 0)
+	{
+		return result;
+	}
+
+	GET_TRACKER_CONNECTION(pTrackerServer, pContext);
+
+	return storage_do_download_file1_ex(pTrackerServer, pStorageServer, \
+		download_type, fdfs_file_id, file_offset, download_bytes, \
+		file_buff, arg, file_size);
+}
+
+int my_fdfs_download_file_to_file(MyClientContext *pContext, \
+		const char *my_file_id, const char *local_filename, \
+		int64_t *file_size)
+{
+	char fdfs_file_id[FDFS_GROUP_NAME_MAX_LEN + 128]; \
+	TrackerServerInfo *pTrackerServer;
+	TrackerServerInfo *pStorageServer = NULL;
+	int result;
+
+	if ((result=my_fdfs_get_file_id(pContext, my_file_id, fdfs_file_id, \
+		sizeof(fdfs_file_id))) != 0)
+	{
+		return result;
+	}
+
+	GET_TRACKER_CONNECTION(pTrackerServer, pContext);
+
+	return storage_download_file_to_file1(pTrackerServer, pStorageServer, \
+		fdfs_file_id, local_filename, file_size);
+}
+
+int my_fdfs_download_file_ex(MyClientContext *pContext, const char *my_file_id, \
+		const int64_t file_offset, const int64_t download_bytes, \
+		DownloadCallback callback, void *arg, int64_t *file_size)
+{
+	char fdfs_file_id[FDFS_GROUP_NAME_MAX_LEN + 128]; \
+	TrackerServerInfo *pTrackerServer;
+	TrackerServerInfo *pStorageServer = NULL;
+	int result;
+
+	if ((result=my_fdfs_get_file_id(pContext, my_file_id, fdfs_file_id, \
+		sizeof(fdfs_file_id))) != 0)
+	{
+		return result;
+	}
+
+	GET_TRACKER_CONNECTION(pTrackerServer, pContext);
+
+	return storage_download_file_ex1(pTrackerServer, pStorageServer, \
+		fdfs_file_id, file_offset, download_bytes, \
+		callback, arg, file_size);
+}
+
+int my_fdfs_append_by_filename(MyClientContext *pContext, \
+		const char *my_appender_file_id, \
+		const char *local_filename)
+{
+	char fdfs_file_id[FDFS_GROUP_NAME_MAX_LEN + 128]; \
+	TrackerServerInfo *pTrackerServer;
+	TrackerServerInfo *pStorageServer = NULL;
+	int result;
+
+	if ((result=my_fdfs_get_file_id(pContext, my_appender_file_id, \
+		fdfs_file_id, sizeof(fdfs_file_id))) != 0)
+	{
+		return result;
+	}
+
+	GET_TRACKER_CONNECTION(pTrackerServer, pContext);
+
+	return storage_append_by_filename1(pTrackerServer, pStorageServer, \
+		local_filename, fdfs_file_id);
+}
+
+int my_fdfs_append_by_filebuff(MyClientContext *pContext, \
+		const char *my_appender_file_id, \
+		const char *file_buff, const int64_t file_size)
+{
+	char fdfs_file_id[FDFS_GROUP_NAME_MAX_LEN + 128]; \
+	TrackerServerInfo *pTrackerServer;
+	TrackerServerInfo *pStorageServer = NULL;
+	int result;
+
+	if ((result=my_fdfs_get_file_id(pContext, my_appender_file_id, \
+		fdfs_file_id, sizeof(fdfs_file_id))) != 0)
+	{
+		return result;
+	}
+
+	GET_TRACKER_CONNECTION(pTrackerServer, pContext);
+
+	return storage_append_by_filebuff1(pTrackerServer, pStorageServer, \
+		file_buff, file_size, fdfs_file_id);
+}
+
+int my_fdfs_append_by_callback(MyClientContext *pContext, \
+		const char *my_appender_file_id, \
+		UploadCallback callback, void *arg, const int64_t file_size)
+{
+	char fdfs_file_id[FDFS_GROUP_NAME_MAX_LEN + 128]; \
+	TrackerServerInfo *pTrackerServer;
+	TrackerServerInfo *pStorageServer = NULL;
+	int result;
+
+	if ((result=my_fdfs_get_file_id(pContext, my_appender_file_id, \
+		fdfs_file_id, sizeof(fdfs_file_id))) != 0)
+	{
+		return result;
+	}
+
+	GET_TRACKER_CONNECTION(pTrackerServer, pContext);
+
+	return storage_append_by_callback1(pTrackerServer, pStorageServer, \
+		callback, arg, file_size, fdfs_file_id);
+}
+
+int my_fdfs_modify_by_filename(MyClientContext *pContext, \
+		const char *my_appender_file_id, \
+		const char *local_filename, const int64_t file_offset)
+{
+	char fdfs_file_id[FDFS_GROUP_NAME_MAX_LEN + 128]; \
+	TrackerServerInfo *pTrackerServer;
+	TrackerServerInfo *pStorageServer = NULL;
+	int result;
+
+	if ((result=my_fdfs_get_file_id(pContext, my_appender_file_id, \
+		fdfs_file_id, sizeof(fdfs_file_id))) != 0)
+	{
+		return result;
+	}
+
+	GET_TRACKER_CONNECTION(pTrackerServer, pContext);
+
+	return storage_modify_by_filename1(pTrackerServer, pStorageServer, \
+		local_filename, file_offset, fdfs_file_id);
+}
+
+int my_fdfs_modify_by_filebuff(MyClientContext *pContext, \
+		const char *my_appender_file_id, const char *file_buff, \
+		const int64_t file_offset, const int64_t file_size)
+{
+	char fdfs_file_id[FDFS_GROUP_NAME_MAX_LEN + 128]; \
+	TrackerServerInfo *pTrackerServer;
+	TrackerServerInfo *pStorageServer = NULL;
+	int result;
+
+	if ((result=my_fdfs_get_file_id(pContext, my_appender_file_id, \
+		fdfs_file_id, sizeof(fdfs_file_id))) != 0)
+	{
+		return result;
+	}
+
+	GET_TRACKER_CONNECTION(pTrackerServer, pContext);
+
+	return storage_modify_by_filebuff1(pTrackerServer, pStorageServer, \
+		file_buff, file_offset, file_size, fdfs_file_id);
+}
+
+int my_fdfs_modify_by_callback(MyClientContext *pContext, \
+		const char *my_appender_file_id, \
+		UploadCallback callback, void *arg, \
+		const int64_t file_offset, const int64_t file_size)
+{
+	char fdfs_file_id[FDFS_GROUP_NAME_MAX_LEN + 128]; \
+	TrackerServerInfo *pTrackerServer;
+	TrackerServerInfo *pStorageServer = NULL;
+	int result;
+
+	if ((result=my_fdfs_get_file_id(pContext, my_appender_file_id, \
+		fdfs_file_id, sizeof(fdfs_file_id))) != 0)
+	{
+		return result;
+	}
+
+	GET_TRACKER_CONNECTION(pTrackerServer, pContext);
+
+	return storage_modify_by_callback1(pTrackerServer, pStorageServer, \
+		callback, arg, file_offset, file_size, fdfs_file_id);
+}
+
+int my_fdfs_truncate_file(MyClientContext *pContext, \
+	const char *my_appender_file_id, const int64_t truncated_file_size)
+{
+	char fdfs_file_id[FDFS_GROUP_NAME_MAX_LEN + 128]; \
+	TrackerServerInfo *pTrackerServer;
+	TrackerServerInfo *pStorageServer = NULL;
+	int result;
+
+	if ((result=my_fdfs_get_file_id(pContext, my_appender_file_id, \
+		fdfs_file_id, sizeof(fdfs_file_id))) != 0)
+	{
+		return result;
+	}
+
+	GET_TRACKER_CONNECTION(pTrackerServer, pContext);
+
+	return storage_truncate_file1(pTrackerServer, pStorageServer, \
+		fdfs_file_id, truncated_file_size);
+}
+
+int my_fdfs_query_file_info_ex(MyClientContext *pContext, \
+		const char *my_file_id, FDFSFileInfo *pFileInfo, \
+		const bool bSilence)
+{
+	char fdfs_file_id[FDFS_GROUP_NAME_MAX_LEN + 128]; \
+	TrackerServerInfo *pTrackerServer;
+	TrackerServerInfo *pStorageServer = NULL;
+	int result;
+
+	if ((result=my_fdfs_get_file_id(pContext, my_file_id, \
+		fdfs_file_id, sizeof(fdfs_file_id))) != 0)
+	{
+		return result;
+	}
+
+	GET_TRACKER_CONNECTION(pTrackerServer, pContext);
+
+	return storage_query_file_info_ex1(pTrackerServer, pStorageServer, \
+		fdfs_file_id, pFileInfo, bSilence);
+}
+
+int my_fdfs_get_file_info_ex(MyClientContext *pContext, \
+		const char *my_file_id, const bool get_from_server, \
+		FDFSFileInfo *pFileInfo)
+{
+	char fdfs_file_id[FDFS_GROUP_NAME_MAX_LEN + 128]; \
+	int result;
+
+	if ((result=my_fdfs_get_file_id(pContext, my_file_id, \
+		fdfs_file_id, sizeof(fdfs_file_id))) != 0)
+	{
+		return result;
+	}
+
+	return fdfs_get_file_info_ex1(fdfs_file_id, get_from_server, pFileInfo);
+}
+
+int my_fdfs_file_exist(MyClientContext *pContext, const char *my_file_id)
+{
+	char fdfs_file_id[FDFS_GROUP_NAME_MAX_LEN + 128]; \
+	TrackerServerInfo *pTrackerServer;
+	TrackerServerInfo *pStorageServer = NULL;
+	int result;
+
+	if ((result=my_fdfs_get_file_id(pContext, my_file_id, \
+		fdfs_file_id, sizeof(fdfs_file_id))) != 0)
+	{
+		return result;
+	}
+
+	GET_TRACKER_CONNECTION(pTrackerServer, pContext);
+
+	return storage_file_exist1(pTrackerServer, pStorageServer, \
+		fdfs_file_id);
 }
 
