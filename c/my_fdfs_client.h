@@ -10,6 +10,7 @@
 #define MY_FDFS_CLIENT_H
 
 #include "tracker_types.h"
+#include "tracker_proto.h"
 #include "storage_client.h"
 #include "my_fdfs_client.h"
 #include "fdht_types.h"
@@ -39,12 +40,13 @@ typedef struct tagMyClientContext
 client init function
 param:
 *	pContext : the context to be init
+*       szFDHTNameSpace: the namespace of FastDHT to store FastDFS file id
 *       fastdfs_conf_filename: FastDFS client config filename
 *       fastdht_conf_filename: FastDHT client config filename
 * return: 0 for success, != 0 for fail (errno)
 */
-int my_client_init(MyClientContext *pContext, const char *fastdfs_conf_filename, 
-	const char *fastdht_conf_filename);
+int my_client_init(MyClientContext *pContext, const char *szFDHTNameSpace, 
+	const char *fastdfs_conf_filename, const char *fastdht_conf_filename);
 
 
 /*

@@ -1,12 +1,30 @@
+#include <errno.h>
+#include "logger.h"
 #include "my_fdfs_client.h"
 #include "tracker_client.h"
 #include "storage_client1.h"
-#include "logger.h"
 
-int my_client_init(MyClientContext *pContext, const char *fastdfs_conf_filename, 
-	const char *fastdht_conf_filename)
+int my_client_init(MyClientContext *pContext, const char *szFDHTNameSpace, 
+	const char *fastdfs_conf_filename, const char *fastdht_conf_filename)
 {
 	int result;
+
+	if (szFDHTNameSpace == NULL || *szFDHTNameSpace == '\0')
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"namespace is empty!", __LINE__);
+		return EINVAL;
+	}
+
+	memset(pContext, 0, sizeof(MyClientContext));
+	pContext->fdht.namespace_len = strlen(szFDHTNameSpace);
+	if (pContext->fdht.namespace_len > FDHT_MAX_NAMESPACE_LEN)
+	{
+		pContext->fdht.namespace_len = FDHT_MAX_NAMESPACE_LEN;
+	}
+	memcpy(pContext->fdht.szNameSpace, szFDHTNameSpace,
+		pContext->fdht.namespace_len + 1);
+
 	if ((result=fdfs_client_init_ex(&(pContext->fdfs.tracker_group), 
 		fastdfs_conf_filename)) != 0)
 	{
