@@ -16,6 +16,8 @@ int main(int argc, char **argv)
 	int64_t file_size;
 
 	log_init();
+	//g_log_context.log_level = LOG_DEBUG;
+
 	if ((result=my_client_init(&context, fastdht_namespace, 
 		fastdfs_conf_filename, fastdht_conf_filename)) != 0)
 	{
@@ -29,6 +31,8 @@ int main(int argc, char **argv)
 			file_ext_name, group_name, my_file_id);
 		if (result != 0)
 		{
+			fprintf(stderr, "upload file fail, errno: %d, " \
+				"error info: %s\n", result, strerror(result));
 			break;
 		}
 
@@ -36,6 +40,8 @@ int main(int argc, char **argv)
 			fdfs_file_id, sizeof(fdfs_file_id));
 		if (result != 0)
 		{
+			fprintf(stderr, "get file id fail, errno: %d, " \
+				"error info: %s\n", result, strerror(result));
 			break;
 		}
 		printf("fdfs_file_id: %s\n", fdfs_file_id);
@@ -44,12 +50,16 @@ int main(int argc, char **argv)
 			"./my_fdfs_test.tmp", &file_size);
 		if (result != 0)
 		{
+			fprintf(stderr, "download file fail, errno: %d, " \
+				"error info: %s\n", result, strerror(result));
 			break;
 		}
 
 		result = my_fdfs_delete_file(&context, my_file_id);
 		if (result != 0)
 		{
+			fprintf(stderr, "delete file fail, errno: %d, " \
+				"error info: %s\n", result, strerror(result));
 			break;
 		}
 
