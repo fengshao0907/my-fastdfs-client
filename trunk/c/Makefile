@@ -25,12 +25,14 @@ SHARED_LIBS = libmyfdfsclient.so.1
 
 ALL_LIBS = $(STATIC_LIBS) $(SHARED_LIBS)
 
-all: $(ALL_OBJS) $(ALL_PRGS) $(ALL_LIBS)
+all: $(ALL_OBJS) $(ALL_PRGS) $(ALL_LIBS) my_fdfs_client_test
 libmyfdfsclient.so.1:
 	$(COMPILE) -o $@ $< -shared $(MY_SHARED_OBJS) $(LIB_PATH) -L. -lfastcommon -lfdfsclient -lfdhtclient
 	ln -fs libmyfdfsclient.so.1 libmyfdfsclient.so
 libmyfdfsclient.a:
 	ar cru $@ $< $(MY_STATIC_OBJS)
+my_fdfs_client_test: my_fdfs_client_test.o
+	$(COMPILE) -o $@ $< $(LIB_PATH) -L. -lfastcommon -lfdfsclient -lfdhtclient $(MY_STATIC_OBJS)
 .o:
 	$(COMPILE) -o $@ $<  $(STATIC_OBJS) $(LIB_PATH) $(INC_PATH)
 .c:
