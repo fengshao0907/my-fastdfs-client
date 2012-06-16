@@ -95,7 +95,9 @@ int my_fdfs_upload_by_filename_ex(MyClientContext *pContext, \
 	my_fdfs_fill_key_info(&keyInfo, pContext, my_file_id);
 	p = fdfs_file_id;
 	value_len = sizeof(fdfs_file_id);
-	result = fdht_get(&keyInfo, &p, &value_len);
+	result = fdht_get_ex1(&(pContext->fdht.group_array), \
+		pContext->fdht.keep_alive, &keyInfo, FDHT_EXPIRES_NONE, \
+		&p, &value_len, malloc);
 	if (result == 0)
 	{
 		return EEXIST;
@@ -127,8 +129,9 @@ int my_fdfs_upload_by_filename_ex(MyClientContext *pContext, \
 
 	value_len = sprintf(fdfs_file_id, "%s%c%s", new_group_name, \
 			FDFS_FILE_ID_SEPERATOR, remote_filename);
-	if ((result=fdht_set(&keyInfo, FDHT_EXPIRES_NEVER, fdfs_file_id, \
-			value_len)) != 0)
+	if ((result=fdht_set_ex(&(pContext->fdht.group_array), \
+		pContext->fdht.keep_alive, &keyInfo, FDHT_EXPIRES_NEVER, \
+		fdfs_file_id, value_len)) != 0)
 	{
 		storage_delete_file1(pTrackerServer, pStorageServer, \
 			fdfs_file_id);  //rollback
@@ -158,7 +161,9 @@ int my_fdfs_do_upload_file(MyClientContext *pContext, const char *my_file_id, \
 	my_fdfs_fill_key_info(&keyInfo, pContext, my_file_id);
 	p = fdfs_file_id;
 	value_len = sizeof(fdfs_file_id);
-	result = fdht_get(&keyInfo, &p, &value_len);
+	result = fdht_get_ex1(&(pContext->fdht.group_array), \
+		pContext->fdht.keep_alive, &keyInfo, FDHT_EXPIRES_NONE, \
+		&p, &value_len, malloc);
 	if (result == 0)
 	{
 		return EEXIST;
@@ -191,8 +196,9 @@ int my_fdfs_do_upload_file(MyClientContext *pContext, const char *my_file_id, \
 
 	value_len = sprintf(fdfs_file_id, "%s%c%s", new_group_name, \
 			FDFS_FILE_ID_SEPERATOR, remote_filename);
-	if ((result=fdht_set(&keyInfo, FDHT_EXPIRES_NEVER, fdfs_file_id, \
-			value_len)) != 0)
+	if ((result=fdht_set_ex(&(pContext->fdht.group_array), \
+		pContext->fdht.keep_alive, &keyInfo, FDHT_EXPIRES_NEVER, \
+		fdfs_file_id, value_len)) != 0)
 	{
 		storage_delete_file1(pTrackerServer, pStorageServer, \
 			fdfs_file_id);  //rollback
@@ -221,7 +227,9 @@ int my_fdfs_upload_by_callback_ex(MyClientContext *pContext, \
 	my_fdfs_fill_key_info(&keyInfo, pContext, my_file_id);
 	p = fdfs_file_id;
 	value_len = sizeof(fdfs_file_id);
-	result = fdht_get(&keyInfo, &p, &value_len);
+	result = fdht_get_ex1(&(pContext->fdht.group_array), \
+		pContext->fdht.keep_alive, &keyInfo, FDHT_EXPIRES_NONE, \
+		&p, &value_len, malloc);
 	if (result == 0)
 	{
 		return EEXIST;
@@ -253,8 +261,9 @@ int my_fdfs_upload_by_callback_ex(MyClientContext *pContext, \
 
 	value_len = sprintf(fdfs_file_id, "%s%c%s", new_group_name, \
 			FDFS_FILE_ID_SEPERATOR, remote_filename);
-	if ((result=fdht_set(&keyInfo, FDHT_EXPIRES_NEVER, fdfs_file_id, \
-			value_len)) != 0)
+	if ((result=fdht_set_ex(&(pContext->fdht.group_array), \
+		pContext->fdht.keep_alive, &keyInfo, FDHT_EXPIRES_NEVER, \
+		fdfs_file_id, value_len)) != 0)
 	{
 		storage_delete_file1(pTrackerServer, pStorageServer, \
 			fdfs_file_id);  //rollback
@@ -277,17 +286,21 @@ int my_fdfs_delete_file(MyClientContext *pContext, const char *my_file_id)
 	my_fdfs_fill_key_info(&keyInfo, pContext, my_file_id);
 	p = fdfs_file_id;
 	value_len = sizeof(fdfs_file_id);
-	if ((result=fdht_get(&keyInfo, &p, &value_len)) != 0)
+	result = fdht_get_ex1(&(pContext->fdht.group_array), \
+		pContext->fdht.keep_alive, &keyInfo, FDHT_EXPIRES_NONE, \
+		&p, &value_len, malloc);
+	if (result != 0)
 	{
 		return result;
 	}
 
 	GET_TRACKER_CONNECTION(pTrackerServer, pContext);
 
-	if ((result=storage_delete_file1 (pTrackerServer, pStorageServer,
+	if ((result=storage_delete_file1(pTrackerServer, pStorageServer,
 		fdfs_file_id)) == 0)
 	{
-		if (fdht_delete(&keyInfo) != 0)
+		if (fdht_delete_ex(&(pContext->fdht.group_array), \
+			pContext->fdht.keep_alive, &keyInfo) != 0)
 		{
 			logError("file: "__FILE__", line: %d, " \
 				"delete key: %s of object: %s fail, " \
@@ -310,7 +323,9 @@ int my_fdfs_get_file_id(MyClientContext *pContext, const char *my_file_id, \
 	my_fdfs_fill_key_info(&keyInfo, pContext, my_file_id);
 	p = fdfs_file_id;
 	value_len = file_id_size;
-	return fdht_get(&keyInfo, &p, &value_len);
+	return fdht_get_ex1(&(pContext->fdht.group_array), \
+		pContext->fdht.keep_alive, &keyInfo, FDHT_EXPIRES_NONE, \
+		&p, &value_len, malloc);
 }
 
 int my_fdfs_do_download_file_ex(MyClientContext *pContext, \
