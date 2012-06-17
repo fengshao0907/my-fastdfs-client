@@ -689,6 +689,7 @@ static void php_my_fdfs_upload_file_impl(INTERNAL_FUNCTION_PARAMETERS, \
 	my_file_id = NULL;
 	local_filename = NULL;
 	filename_len = 0;
+	ext_name_obj = NULL;
 	group_name_obj = NULL;
 
 	if (upload_type == FDFS_UPLOAD_BY_CALLBACK)
@@ -1057,10 +1058,44 @@ PHP_METHOD(MyFastDFSClient, upload_appender_by_callback)
 		FDFS_UPLOAD_BY_CALLBACK);
 }
 
+/*
+long MyFastDFSClient::get_last_error_no()
+return last error no
+*/
+PHP_METHOD(MyFastDFSClient, get_last_error_no)
+{
+	zval *object = getThis();
+	php_fdfs_t *i_obj;
+
+	i_obj = (php_fdfs_t *) zend_object_store_get_object(object TSRMLS_CC);
+	RETURN_LONG(i_obj->context.err_no);
+}
+
+/*
+string MyFastDFSClient::get_last_error_info()
+return last error info
+*/
+PHP_METHOD(MyFastDFSClient, get_last_error_info)
+{
+	char *error_info;
+	zval *object = getThis();
+	php_fdfs_t *i_obj;
+
+	i_obj = (php_fdfs_t *) zend_object_store_get_object(object TSRMLS_CC);
+	error_info = STRERROR(i_obj->context.err_no);
+	RETURN_STRINGL(error_info, strlen(error_info), 1);
+}
+
 ZEND_BEGIN_ARG_INFO_EX(arginfo___construct, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_close, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_get_last_error_no, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_get_last_error_info, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_get_file_id, 0, 0, 1)
@@ -1114,6 +1149,8 @@ ZEND_END_ARG_INFO()
 static zend_function_entry my_fdfs_class_methods[] = {
     MY_FDFS_ME(__construct,        arginfo___construct)
     MY_FDFS_ME(close,              arginfo_close)
+    MY_FDFS_ME(get_last_error_no,  arginfo_get_last_error_no)
+    MY_FDFS_ME(get_last_error_info,arginfo_get_last_error_info)
     MY_FDFS_ME(get_file_id,        arginfo_get_file_id)
     MY_FDFS_ME(upload_by_filename, arginfo_upload_by_filename)
     MY_FDFS_ME(upload_by_filebuff, arginfo_upload_by_filebuff)
