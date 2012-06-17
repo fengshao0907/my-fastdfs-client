@@ -49,6 +49,30 @@ void my_client_destroy(MyClientContext *pContext)
 	fdht_client_destroy(&(pContext->fdht.group_array));
 }
 
+int my_fdfs_copy_context(MyClientContext *pDestContext, \
+	MyClientContext *pSrcContext)
+{
+	int result;
+	if ((result=fdfs_copy_tracker_group(&(pDestContext->fdfs.tracker_group),
+		&(pSrcContext->fdfs.tracker_group))) != 0)
+	{
+		return result;
+	}
+
+	if ((result=fdht_copy_group_array(&(pDestContext->fdht.group_array), \
+		&(pSrcContext->fdht.group_array))) != 0)
+	{
+		return result;
+	}
+
+	pDestContext->fdht.keep_alive = pSrcContext->fdht.keep_alive;
+	pDestContext->fdht.namespace_len = pSrcContext->fdht.namespace_len;
+	memcpy(pDestContext->fdht.szNameSpace, pSrcContext->fdht.szNameSpace, \
+		pSrcContext->fdht.namespace_len + 1);
+
+	return 0;
+}
+
 static void my_fdfs_fill_key_info(FDHTKeyInfo *pKeyInfo, \
 		MyClientContext *pContext, const char *my_file_id)
 {
