@@ -61,8 +61,6 @@ static int php_fdfs_download_callback(void *arg, const int64_t file_size, \
 static FDFSConfigInfo *config_list = NULL;
 static int config_count = 0;
 
-static FDFSPhpContext php_context = {&g_tracker_group, 0};
-
 static zend_class_entry *fdfs_ce = NULL;
 static zend_class_entry *fdfs_exception_ce = NULL;
 
@@ -629,7 +627,14 @@ static void php_fdfs_close(php_fdfs_t *i_obj TSRMLS_DC)
 	{
 		tracker_close_all_connections_ex(&(i_obj->context. \
 			pMyClientContext->fdfs.tracker_group));
+                fdht_disconnect_all_servers(&(i_obj->context. \
+			pMyClientContext.fdht.group_array));
 	}
+        else if (!i_obj->context.pMyClientContext.fdht.keep_alive)
+        {
+                fdht_disconnect_all_servers(&(i_obj->context. \
+			pMyClientContext.fdht.group_array));
+        }
 }
 
 /* constructor/destructor */
@@ -745,14 +750,14 @@ PHP_METHOD(MyFastDFSClient, close)
 ZEND_BEGIN_ARG_INFO_EX(arginfo___construct, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
-/* {{{ fdfs_class_methods */
-#define FDFS_ME(name, args) PHP_ME(MyFastDFSClient, name, args, ZEND_ACC_PUBLIC)
-static zend_function_entry fdfs_class_methods[] = {
-    FDFS_ME(__construct,        arginfo___construct)
-    FDFS_ME(close,                 arginfo_close)
+/* {{{ my_fdfs_class_methods */
+#define MY_FDFS_ME(name, args) PHP_ME(MyFastDFSClient, name, args, ZEND_ACC_PUBLIC)
+static zend_function_entry my_fdfs_class_methods[] = {
+    MY_FDFS_ME(__construct,        arginfo___construct)
+    MY_FDFS_ME(close,              arginfo_close)
     { NULL, NULL, NULL }
 };
-#undef FDFS_ME
+#undef MY_FDFS_ME
 /* }}} */
 
 static void php_fdfs_free_storage(php_fdfs_t *i_obj TSRMLS_DC)
@@ -873,6 +878,7 @@ static int load_config_files()
 	zval fdht_namespace;
 	FDFSConfigInfo *pConfigInfo;
 	FDFSConfigInfo *pConfigEnd;
+	int config_count;
 	int result;
 
 	if (zend_get_configuration_directive(ITEM_NAME_CONF_COUNT, 
@@ -1008,7 +1014,7 @@ PHP_MINIT_FUNCTION(my_fastdfs_client)
 	le_my_fdfs = zend_register_list_destructors_ex(NULL, php_fdfs_dtor, \
 			"MyFastDFSClient", module_number);
 
-	INIT_CLASS_ENTRY(ce, "MyFastDFSClient", fdfs_class_methods);
+	INIT_CLASS_ENTRY(ce, "MyFastDFSClient", my_fdfs_class_methods);
 	fdfs_ce = zend_register_internal_class(&ce TSRMLS_CC);
 	fdfs_ce->create_object = php_fdfs_new;
 
