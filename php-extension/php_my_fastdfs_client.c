@@ -58,8 +58,10 @@ typedef struct
 	int64_t file_size;
 } php_fdfs_upload_callback_t;
 
+/*
 static int php_fdfs_download_callback(void *arg, const int64_t file_size, \
 		const char *data, const int current_size);
+*/
 
 static FDFSConfigInfo *config_list = NULL;
 static int config_count = 0;
@@ -103,6 +105,7 @@ zend_module_entry my_fastdfs_client_module_entry = {
 	ZEND_GET_MODULE(my_fastdfs_client)
 #endif
 
+/*
 static int php_fdfs_get_callback_from_hash(HashTable *callback_hash, \
 		php_fdfs_callback_t *pCallback)
 {
@@ -182,7 +185,6 @@ static int php_fdfs_get_upload_callback_from_hash(HashTable *callback_hash, \
 	return 0;
 }
 
-/*
 static void php_fdfs_storage_delete_file_impl( \
 		INTERNAL_FUNCTION_PARAMETERS, 
 		FDFSPhpContext *pContext)
@@ -508,7 +510,6 @@ static void php_fdfs_storage_download_file_to_callback_impl( \
 	}
 	RETURN_BOOL(true);
 }
-*/
 
 static int php_fdfs_upload_callback(void *arg, const int64_t file_size, int sock)
 {
@@ -603,6 +604,52 @@ static int php_fdfs_download_callback(void *arg, const int64_t file_size, \
 	}
 
 	return result;
+}
+*/
+
+static void php_my_fdfs_get_file_id_impl( \
+	INTERNAL_FUNCTION_PARAMETERS, FDFSPhpContext *pContext)
+{
+	int argc;
+	char *my_file_id;
+	char fdfs_file_id[128];
+	int my_file_id_len;
+
+	argc = ZEND_NUM_ARGS();
+	if (argc != 1)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"get_file_id parameters count: %d != 1", \
+			__LINE__, argc);
+		pContext->err_no = EINVAL;
+		RETURN_BOOL(false);
+	}
+
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, \
+		"s", &my_file_id, &my_file_id_len) == FAILURE)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"zend_parse_parameters fail!", __LINE__);
+		pContext->err_no = EINVAL;
+		RETURN_BOOL(false);
+	}
+
+	if (my_file_id_len == 0)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"my file id is empty!", __LINE__);
+		pContext->err_no = EINVAL;
+		RETURN_BOOL(false);
+	}
+
+	pContext->err_no = my_fdfs_get_file_id(pContext->pMyClientContext, \
+		my_file_id, fdfs_file_id, sizeof(fdfs_file_id));
+	if (pContext->err_no != 0)
+	{
+		RETURN_BOOL(false);
+	}
+
+	RETURN_STRINGL(fdfs_file_id, strlen(fdfs_file_id), 1);
 }
 
 /*
@@ -756,10 +803,27 @@ PHP_METHOD(MyFastDFSClient, close)
 	php_fdfs_close(i_obj TSRMLS_CC);
 }
 
+/*
+string MyFastDFSClient::get_file_id(string my_file_id)
+*/
+PHP_METHOD(MyFastDFSClient, get_file_id)
+{
+	zval *object = getThis();
+	php_fdfs_t *i_obj;
+
+	i_obj = (php_fdfs_t *) zend_object_store_get_object(object TSRMLS_CC);
+	php_my_fdfs_get_file_id_impl(INTERNAL_FUNCTION_PARAM_PASSTHRU, \
+                        &(i_obj->context));
+}
+
 ZEND_BEGIN_ARG_INFO_EX(arginfo___construct, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo_close, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_get_file_id, 0, 0, 1)
+ZEND_ARG_INFO(0, my_file_id)
 ZEND_END_ARG_INFO()
 
 /* {{{ my_fdfs_class_methods */
@@ -767,6 +831,7 @@ ZEND_END_ARG_INFO()
 static zend_function_entry my_fdfs_class_methods[] = {
     MY_FDFS_ME(__construct,        arginfo___construct)
     MY_FDFS_ME(close,              arginfo_close)
+    MY_FDFS_ME(get_file_id,        arginfo_get_file_id)
     { NULL, NULL, NULL }
 };
 #undef MY_FDFS_ME
@@ -877,12 +942,10 @@ static int load_config_files()
 	#define ITEM_NAME_FDFS_CONF_FILE  "my_fastdfs_client.fdfs_config_filename"
 	#define ITEM_NAME_FDHT_CONF_FILE  "my_fastdfs_client.fdht_config_filename"
 	#define ITEM_NAME_FDHT_NAMESPACE  "my_fastdfs_client.fdht_namespace"
-	#define ITEM_NAME_BASE_PATH   	  "my_fastdfs_client.base_path"
 	#define ITEM_NAME_LOG_LEVEL       "my_fastdfs_client.log_level"
 	#define ITEM_NAME_LOG_FILENAME    "my_fastdfs_client.log_filename"
 
 	zval conf_c;
-	zval base_path;
 	zval log_level;
 	zval log_filename;
 	zval fdfs_conf_filename;
@@ -908,36 +971,6 @@ static int load_config_files()
 	else
 	{
 		 config_count = 1;
-	}
-
-	if (zend_get_configuration_directive(ITEM_NAME_BASE_PATH, \
-			sizeof(ITEM_NAME_BASE_PATH), &base_path) != SUCCESS)
-	{
-		strcpy(g_fdfs_base_path, "/tmp");
-		strcpy(g_fdht_base_path, "/tmp");
-		fprintf(stderr, "file: "__FILE__", line: %d, " \
-			"fastdht_client.ini does not have item " \
-			"\"%s\", set to %s!", __LINE__, 
-			ITEM_NAME_BASE_PATH, g_fdfs_base_path);
-	}
-	else
-	{
-		snprintf(g_fdfs_base_path, sizeof(g_fdfs_base_path), "%s", \
-			base_path.value.str.val);
-		chopPath(g_fdfs_base_path);
-		strcpy(g_fdht_base_path, g_fdfs_base_path);
-	}
-
-	if (!fileExists(g_fdfs_base_path))
-	{
-		logError("\"%s\" can't be accessed, error info: %s", \
-			g_fdfs_base_path, STRERROR(errno));
-		return errno != 0 ? errno : ENOENT;
-	}
-	if (!isDir(g_fdfs_base_path))
-	{
-		logError("\"%s\" is not a directory!", g_fdfs_base_path);
-		return ENOTDIR;
 	}
 
 	if (zend_get_configuration_directive(ITEM_NAME_LOG_LEVEL, \
@@ -1000,15 +1033,15 @@ static int load_config_files()
 		}
 
 		if ((result=my_client_init(pConfigInfo->pMyClientContext, \
+				fdht_namespace.value.str.val, \
 				fdfs_conf_filename.value.str.val, \
-				fdht_conf_filename.value.str.val, \
-				fdht_namespace.value.str.val)) != 0)
+				fdht_conf_filename.value.str.val)) != 0)
 		{
 			return result;
 		}
 	}
 
-	logInfo("base_path=%s, cluster_count=%d", g_fdfs_base_path, config_count);
+	//logInfo("base_path=%s, cluster_count=%d", g_fdfs_base_path, config_count);
 	return 0;
 }
 
