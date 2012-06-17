@@ -21,9 +21,11 @@
 #include "logger.h"
 #include "sockopt.h"
 #include "fdfs_global.h"
+#include "fdht_global.h"
+#include "tracker_client.h"
 #include "shared_func.h"
 #include "client_global.h"
-#include "my_fastdfs_client.h"
+#include "my_fdfs_client.h"
 #include "php_my_fastdfs_client.h"
 
 typedef struct
@@ -180,6 +182,7 @@ static int php_fdfs_get_upload_callback_from_hash(HashTable *callback_hash, \
 	return 0;
 }
 
+/*
 static void php_fdfs_storage_delete_file_impl( \
 		INTERNAL_FUNCTION_PARAMETERS, 
 		FDFSPhpContext *pContext)
@@ -505,6 +508,7 @@ static void php_fdfs_storage_download_file_to_callback_impl( \
 	}
 	RETURN_BOOL(true);
 }
+*/
 
 static int php_fdfs_upload_callback(void *arg, const int64_t file_size, int sock)
 {
@@ -629,12 +633,12 @@ static void php_fdfs_close(php_fdfs_t *i_obj TSRMLS_DC)
 		tracker_close_all_connections_ex(&(i_obj->context. \
 			pMyClientContext->fdfs.tracker_group));
                 fdht_disconnect_all_servers(&(i_obj->context. \
-			pMyClientContext.fdht.group_array));
+			pMyClientContext->fdht.group_array));
 	}
-        else if (!i_obj->context.pMyClientContext.fdht.keep_alive)
+        else if (!i_obj->context.pMyClientContext->fdht.keep_alive)
         {
                 fdht_disconnect_all_servers(&(i_obj->context. \
-			pMyClientContext.fdht.group_array));
+			pMyClientContext->fdht.group_array));
         }
 }
 
@@ -702,6 +706,7 @@ static PHP_METHOD(MyFastDFSClient, __construct)
 					sizeof(MyClientContext));
 		if (i_obj->context.pMyClientContext == NULL)
 		{
+			i_obj->context.err_no = errno != 0 ? errno : ENOMEM;
 			logError("file: "__FILE__", line: %d, " \
 				"malloc %d bytes fail!", __LINE__, \
 				(int)sizeof(MyClientContext));
@@ -709,8 +714,9 @@ static PHP_METHOD(MyFastDFSClient, __construct)
 			return;
 		}
 
-		if (fdfs_copy_tracker_group(i_obj->context.pMyClientContext, \
-			i_obj->pConfigInfo->pMyClientContext) != 0)
+		if ((i_obj->context.err_no=my_fdfs_copy_context( \
+			i_obj->context.pMyClientContext, \
+			i_obj->pConfigInfo->pMyClientContext)) != 0)
 		{
 			ZVAL_NULL(object);
 			return;
@@ -732,8 +738,10 @@ PHP_METHOD(MyFastDFSClient, tracker_get_connection)
 	php_fdfs_t *i_obj;
 
 	i_obj = (php_fdfs_t *) zend_object_store_get_object(object TSRMLS_CC);
+	/*
 	php_fdfs_tracker_get_connection_impl(INTERNAL_FUNCTION_PARAM_PASSTHRU, \
-			&(i_obj->context));
+				&(i_obj->context));
+	*/
 }
 
 /*
@@ -749,6 +757,9 @@ PHP_METHOD(MyFastDFSClient, close)
 }
 
 ZEND_BEGIN_ARG_INFO_EX(arginfo___construct, 0, 0, 0)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_close, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
 /* {{{ my_fdfs_class_methods */
@@ -959,7 +970,7 @@ static int load_config_files()
 	pConfigEnd = config_list + config_count;
 	for (pConfigInfo=config_list; pConfigInfo<pConfigEnd; pConfigInfo++)
 	{
-		int index = (int)(pConfigInfo - config_list));
+		int index = (int)(pConfigInfo - config_list);
 		if ((result=load_cluster_item_value(ITEM_NAME_FDFS_CONF_FILE, \
 			index, &fdfs_conf_filename)) != 0)
 		{
@@ -1041,7 +1052,7 @@ PHP_MSHUTDOWN_FUNCTION(my_fastdfs_client)
 			{
 				continue;
 			}
-			my_fdfs_client_destroy(pConfigInfo->pMyClientContext);
+			my_client_destroy(pConfigInfo->pMyClientContext);
 		}
 	}
 
