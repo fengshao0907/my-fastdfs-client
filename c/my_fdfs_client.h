@@ -376,6 +376,17 @@ int my_fdfs_get_file_info_ex(MyClientContext *pContext, \
 **/
 int my_fdfs_file_exist(MyClientContext *pContext, const char *my_file_id);
 
+
+/**
+* copy context
+* params:
+*	pDestContext: the dest context
+*	pSrcContext: the source context
+* return: 0 success, !=0 fail, return the error code
+**/
+int my_fdfs_copy_context(MyClientContext *pDestContext, \
+	MyClientContext *pSrcContext);
+
 #ifdef __cplusplus
 }
 #endif
