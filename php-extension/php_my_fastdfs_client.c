@@ -24,6 +24,7 @@
 #include "shared_func.h"
 #include "client_global.h"
 #include "my_fastdfs_client.h"
+#include "php_my_fastdfs_client.h"
 
 typedef struct
 {
