@@ -1,5 +1,5 @@
-#ifndef MY_FASTDFS_CLIENT_H
-#define MY_FASTDFS_CLIENT_H
+#ifndef PHP_MY_FASTDFS_CLIENT_H
+#define PHP_MY_FASTDFS_CLIENT_H
 
 #ifdef __cplusplus
 extern "C" {
