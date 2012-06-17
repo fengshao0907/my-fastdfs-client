@@ -17,7 +17,7 @@ MY_HEADER_FILES = my_fdfs_client.h
 
 ALL_OBJS = $(MY_STATIC_OBJS) $(MY_SHARED_OBJS)
 
-ALL_PRGS = 
+ALL_PRGS = my_fdfs_client_test
 
 STATIC_LIBS = libmyfdfsclient.a
 
@@ -25,7 +25,7 @@ SHARED_LIBS = libmyfdfsclient.so.1
 
 ALL_LIBS = $(STATIC_LIBS) $(SHARED_LIBS)
 
-all: $(ALL_OBJS) $(ALL_PRGS) $(ALL_LIBS) my_fdfs_client_test
+all: $(ALL_OBJS) $(ALL_PRGS) $(ALL_LIBS) 
 libmyfdfsclient.so.1:
 	$(COMPILE) -o $@ $< -shared $(MY_SHARED_OBJS) $(LIB_PATH) -L. -lfastcommon -lfdfsclient -lfdhtclient
 	ln -fs libmyfdfsclient.so.1 libmyfdfsclient.so
@@ -45,16 +45,16 @@ install:
 	mkdir -p $(TARGET_PATH)
 	mkdir -p $(TARGET_LIB)
 	cp -f $(ALL_PRGS) $(TARGET_PATH)
-	if [ 0 -eq 1 ]; then cp -f $(STATIC_LIBS) $(TARGET_LIB); fi
-	if [ 1 -eq 1 ]; then cp -f $(SHARED_LIBS) $(TARGET_LIB); fi
-	if [ 1 -eq 1 ]; then ln -fs $(TARGET_LIB)/libmyfdfsclient.so.1 $(TARGET_LIB)/libmyfdfsclient.so; fi
+	if [ $(ENABLE_STATIC_LIB) -eq 1 ]; then cp -f $(STATIC_LIBS) $(TARGET_LIB); fi
+	if [ $(ENABLE_SHARED_LIB) -eq 1 ]; then cp -f $(SHARED_LIBS) $(TARGET_LIB); fi
+	if [ $(ENABLE_SHARED_LIB) -eq 1 ]; then ln -fs $(TARGET_LIB)/libmyfdfsclient.so.1 $(TARGET_LIB)/libmyfdfsclient.so; fi
 
 	mkdir -p $(TARGET_INC)
 	mkdir -p $(TARGET_INC)/fastcommon
 	mkdir -p $(TARGET_INC)/fastdfs
 	cp -f $(MY_HEADER_FILES) $(TARGET_INC)/fastdfs
 
-	if [ 1 -eq 1 -a $(TARGET_LIB) = "/usr/local/lib" ]; then sh ./fdfs_link_library.sh; fi
+	if [ $(ENABLE_SHARED_LIB) -eq 1 -a $(TARGET_LIB) = "/usr/local/lib" ]; then sh ./my_fdfs_link_library.sh; fi
 clean:
-	rm -f $(ALL_OBJS) $(ALL_PRGS) $(ALL_LIBS) libmyfdfsclient.so my_fdfs_client_test
+	rm -f $(ALL_OBJS) $(ALL_PRGS) $(ALL_LIBS) libmyfdfsclient.so
 
