@@ -1009,6 +1009,54 @@ PHP_METHOD(MyFastDFSClient, upload_by_callback)
 		FDFS_UPLOAD_BY_CALLBACK);
 }
 
+/*
+boolean MyFastDFSClient::upload_appender_by_filename(string my_file_id, 
+	string local_filename [, string file_ext_name, string group_name])
+return true for success, false for error
+*/
+PHP_METHOD(MyFastDFSClient, upload_appender_by_filename)
+{
+	zval *object = getThis();
+	php_fdfs_t *i_obj;
+
+	i_obj = (php_fdfs_t *) zend_object_store_get_object(object TSRMLS_CC);
+	php_my_fdfs_upload_file_impl(INTERNAL_FUNCTION_PARAM_PASSTHRU, \
+		&(i_obj->context), STORAGE_PROTO_CMD_UPLOAD_APPENDER_FILE, \
+		FDFS_UPLOAD_BY_FILE);
+}
+
+/*
+boolean MyFastDFSClient::upload_appender_by_filebuff(string my_file_id, string file_buff
+	[, string file_ext_name, string group_name])
+return true for success, false for error
+*/
+PHP_METHOD(MyFastDFSClient, upload_appender_by_filebuff)
+{
+	zval *object = getThis();
+	php_fdfs_t *i_obj;
+
+	i_obj = (php_fdfs_t *) zend_object_store_get_object(object TSRMLS_CC);
+	php_my_fdfs_upload_file_impl(INTERNAL_FUNCTION_PARAM_PASSTHRU, \
+		&(i_obj->context), STORAGE_PROTO_CMD_UPLOAD_APPENDER_FILE, \
+		FDFS_UPLOAD_BY_BUFF);
+}
+
+/*
+boolean MyFastDFSClient::upload_appender_by_callback(string my_file_id, 
+	array callback_array [, string file_ext_name, string group_name])
+return true for success, false for error
+*/
+PHP_METHOD(MyFastDFSClient, upload_appender_by_callback)
+{
+	zval *object = getThis();
+	php_fdfs_t *i_obj;
+
+	i_obj = (php_fdfs_t *) zend_object_store_get_object(object TSRMLS_CC);
+	php_my_fdfs_upload_file_impl(INTERNAL_FUNCTION_PARAM_PASSTHRU, \
+		&(i_obj->context), STORAGE_PROTO_CMD_UPLOAD_APPENDER_FILE, \
+		FDFS_UPLOAD_BY_CALLBACK);
+}
+
 ZEND_BEGIN_ARG_INFO_EX(arginfo___construct, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
@@ -1040,6 +1088,27 @@ ZEND_ARG_INFO(0, file_ext_name)
 ZEND_ARG_INFO(0, group_name)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_upload_appender_by_filename, 0, 0, 2)
+ZEND_ARG_INFO(0, my_file_id)
+ZEND_ARG_INFO(0, local_filename)
+ZEND_ARG_INFO(0, file_ext_name)
+ZEND_ARG_INFO(0, group_name)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_upload_appender_by_filebuff, 0, 0, 2)
+ZEND_ARG_INFO(0, my_file_id)
+ZEND_ARG_INFO(0, file_buff)
+ZEND_ARG_INFO(0, file_ext_name)
+ZEND_ARG_INFO(0, group_name)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_upload_appender_by_callback, 0, 0, 2)
+ZEND_ARG_INFO(0, my_file_id)
+ZEND_ARG_INFO(0, callback_array)
+ZEND_ARG_INFO(0, file_ext_name)
+ZEND_ARG_INFO(0, group_name)
+ZEND_END_ARG_INFO()
+
 /* {{{ my_fdfs_class_methods */
 #define MY_FDFS_ME(name, args) PHP_ME(MyFastDFSClient, name, args, ZEND_ACC_PUBLIC)
 static zend_function_entry my_fdfs_class_methods[] = {
@@ -1049,6 +1118,9 @@ static zend_function_entry my_fdfs_class_methods[] = {
     MY_FDFS_ME(upload_by_filename, arginfo_upload_by_filename)
     MY_FDFS_ME(upload_by_filebuff, arginfo_upload_by_filebuff)
     MY_FDFS_ME(upload_by_callback, arginfo_upload_by_callback)
+    MY_FDFS_ME(upload_appender_by_filename, arginfo_upload_appender_by_filename)
+    MY_FDFS_ME(upload_appender_by_filebuff, arginfo_upload_appender_by_filebuff)
+    MY_FDFS_ME(upload_appender_by_callback, arginfo_upload_appender_by_callback)
     { NULL, NULL, NULL }
 };
 #undef MY_FDFS_ME
