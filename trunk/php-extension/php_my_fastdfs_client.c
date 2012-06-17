@@ -105,7 +105,6 @@ zend_module_entry my_fastdfs_client_module_entry = {
 	ZEND_GET_MODULE(my_fastdfs_client)
 #endif
 
-/*
 static int php_fdfs_get_callback_from_hash(HashTable *callback_hash, \
 		php_fdfs_callback_t *pCallback)
 {
@@ -185,6 +184,7 @@ static int php_fdfs_get_upload_callback_from_hash(HashTable *callback_hash, \
 	return 0;
 }
 
+/*
 static void php_fdfs_storage_delete_file_impl( \
 		INTERNAL_FUNCTION_PARAMETERS, 
 		FDFSPhpContext *pContext)
@@ -340,8 +340,7 @@ static void php_fdfs_storage_delete_file_impl( \
 }
 
 static void php_fdfs_storage_download_file_to_callback_impl( \
-	INTERNAL_FUNCTION_PARAMETERS, FDFSPhpContext *pContext, \
-	const bool bFileId)
+	INTERNAL_FUNCTION_PARAMETERS, FDFSPhpContext *pContext)
 {
 	int argc;
 	char *group_name;
@@ -510,6 +509,7 @@ static void php_fdfs_storage_download_file_to_callback_impl( \
 	}
 	RETURN_BOOL(true);
 }
+*/
 
 static int php_fdfs_upload_callback(void *arg, const int64_t file_size, int sock)
 {
@@ -557,6 +557,7 @@ static int php_fdfs_upload_callback(void *arg, const int64_t file_size, int sock
 	return result;
 }
 
+/*
 static int php_fdfs_download_callback(void *arg, const int64_t file_size, \
 		const char *data, const int current_size)
 {
@@ -607,6 +608,18 @@ static int php_fdfs_download_callback(void *arg, const int64_t file_size, \
 }
 */
 
+#define CHECK_MY_FILE_ID_LEN(pContext, my_file_id_len) \
+	do \
+	{  \
+		if (my_file_id_len == 0) \
+		{ \
+			logError("file: "__FILE__", line: %d, " \
+				"my file id is empty!", __LINE__); \
+			pContext->err_no = EINVAL; \
+			RETURN_BOOL(false); \
+		} \
+	} while (0)
+
 static void php_my_fdfs_get_file_id_impl( \
 	INTERNAL_FUNCTION_PARAMETERS, FDFSPhpContext *pContext)
 {
@@ -625,6 +638,7 @@ static void php_my_fdfs_get_file_id_impl( \
 		RETURN_BOOL(false);
 	}
 
+	my_file_id = NULL;
 	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, \
 		"s", &my_file_id, &my_file_id_len) == FAILURE)
 	{
@@ -634,13 +648,7 @@ static void php_my_fdfs_get_file_id_impl( \
 		RETURN_BOOL(false);
 	}
 
-	if (my_file_id_len == 0)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"my file id is empty!", __LINE__);
-		pContext->err_no = EINVAL;
-		RETURN_BOOL(false);
-	}
+	CHECK_MY_FILE_ID_LEN(pContext, my_file_id_len);
 
 	pContext->err_no = my_fdfs_get_file_id(pContext->pMyClientContext, \
 		my_file_id, fdfs_file_id, sizeof(fdfs_file_id));
@@ -650,6 +658,143 @@ static void php_my_fdfs_get_file_id_impl( \
 	}
 
 	RETURN_STRINGL(fdfs_file_id, strlen(fdfs_file_id), 1);
+}
+
+static void php_my_fdfs_upload_file_impl(INTERNAL_FUNCTION_PARAMETERS, \
+		FDFSPhpContext *pContext, const byte cmd, \
+		const byte upload_type)
+{
+	int result;
+	int argc;
+	char *my_file_id;
+	int my_file_id_len;
+	char *local_filename;
+	int filename_len;
+	char *file_ext_name;
+	zval *callback_obj;
+	zval *ext_name_obj;
+	zval *group_name_obj;
+	char group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
+
+    	argc = ZEND_NUM_ARGS();
+	if (argc < 2 || argc > 4)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"upload_file parameters count: %d < 2 or > 4", \
+		__LINE__, argc);
+		pContext->err_no = EINVAL;
+		RETURN_BOOL(false);
+	}
+
+	my_file_id = NULL;
+	local_filename = NULL;
+	filename_len = 0;
+	group_name_obj = NULL;
+
+	if (upload_type == FDFS_UPLOAD_BY_CALLBACK)
+	{
+		result = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, \
+			"sa|zz", &my_file_id, &my_file_id_len, &callback_obj, \
+			&ext_name_obj, &group_name_obj);
+	}
+	else
+	{
+		result = zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, \
+			"ss|zz", &my_file_id, &my_file_id_len, \
+			&local_filename, &filename_len, \
+			&ext_name_obj, &group_name_obj);
+	}
+
+	if (result == FAILURE)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"zend_parse_parameters fail!", __LINE__);
+		pContext->err_no = EINVAL;
+		RETURN_BOOL(false);
+	}
+
+	CHECK_MY_FILE_ID_LEN(pContext, my_file_id_len);
+
+	if (ext_name_obj == NULL)
+	{
+		file_ext_name = NULL;
+	}
+	else
+	{
+		if (ext_name_obj->type == IS_NULL)
+		{
+			file_ext_name = NULL;
+		}
+		else if (ext_name_obj->type == IS_STRING)
+		{
+			file_ext_name = ext_name_obj->value.str.val;
+		}
+		else
+		{
+			logError("file: "__FILE__", line: %d, " \
+				"file_ext_name is not a string, type=%d!", \
+				__LINE__, ext_name_obj->type);
+			pContext->err_no = EINVAL;
+			RETURN_BOOL(false);
+		}
+	}
+
+	if (group_name_obj != NULL && group_name_obj->type == IS_STRING)
+	{
+		snprintf(group_name, sizeof(group_name), "%s", \
+			group_name_obj->value.str.val);
+	}
+	else
+	{
+		*group_name = '\0';
+	}
+
+	if (upload_type == FDFS_UPLOAD_BY_FILE)
+	{
+		pContext->err_no = my_fdfs_upload_by_filename_ex( \
+			pContext->pMyClientContext, my_file_id, cmd, \
+			local_filename, file_ext_name, group_name);
+	}
+	else if (upload_type == FDFS_UPLOAD_BY_BUFF)
+	{
+		char *buff;
+		int buff_len;
+
+		buff = local_filename;
+		buff_len = filename_len;
+		pContext->err_no = my_fdfs_do_upload_file( \
+			pContext->pMyClientContext, my_file_id, \
+			cmd, FDFS_UPLOAD_BY_BUFF, buff, NULL, \
+			buff_len, file_ext_name, group_name);
+	}
+	else  //by callback
+	{
+		HashTable *callback_hash;
+		php_fdfs_upload_callback_t php_callback;
+
+		callback_hash = Z_ARRVAL_P(callback_obj);
+		result = php_fdfs_get_upload_callback_from_hash(callback_hash, \
+				&php_callback);
+		if (result != 0)
+		{
+			pContext->err_no = result;
+			RETURN_BOOL(false);
+		}
+
+		pContext->err_no = my_fdfs_upload_by_callback_ex( \
+			pContext->pMyClientContext, my_file_id, cmd, \
+			php_fdfs_upload_callback, (void *)&php_callback, \
+			php_callback.file_size, file_ext_name, group_name);
+	}
+
+	if (pContext->err_no == 0)
+	{
+		RETURN_BOOL(true);
+	}
+	else
+	{
+		RETURN_BOOL(false);
+	}
 }
 
 /*
@@ -816,6 +961,54 @@ PHP_METHOD(MyFastDFSClient, get_file_id)
                         &(i_obj->context));
 }
 
+/*
+boolean MyFastDFSClient::upload_by_filename(string my_file_id, 
+	string local_filename [, string file_ext_name, string group_name])
+return true for success, false for error
+*/
+PHP_METHOD(MyFastDFSClient, upload_by_filename)
+{
+	zval *object = getThis();
+	php_fdfs_t *i_obj;
+
+	i_obj = (php_fdfs_t *) zend_object_store_get_object(object TSRMLS_CC);
+	php_my_fdfs_upload_file_impl(INTERNAL_FUNCTION_PARAM_PASSTHRU, \
+		&(i_obj->context), STORAGE_PROTO_CMD_UPLOAD_FILE, \
+		FDFS_UPLOAD_BY_FILE);
+}
+
+/*
+boolean MyFastDFSClient::upload_by_filebuff(string my_file_id, string file_buff
+	[, string file_ext_name, string group_name])
+return true for success, false for error
+*/
+PHP_METHOD(MyFastDFSClient, upload_by_filebuff)
+{
+	zval *object = getThis();
+	php_fdfs_t *i_obj;
+
+	i_obj = (php_fdfs_t *) zend_object_store_get_object(object TSRMLS_CC);
+	php_my_fdfs_upload_file_impl(INTERNAL_FUNCTION_PARAM_PASSTHRU, \
+		&(i_obj->context), STORAGE_PROTO_CMD_UPLOAD_FILE, \
+		FDFS_UPLOAD_BY_BUFF);
+}
+
+/*
+boolean MyFastDFSClient::upload_by_callback(string my_file_id, 
+	array callback_array [, string file_ext_name, string group_name])
+return true for success, false for error
+*/
+PHP_METHOD(MyFastDFSClient, upload_by_callback)
+{
+	zval *object = getThis();
+	php_fdfs_t *i_obj;
+
+	i_obj = (php_fdfs_t *) zend_object_store_get_object(object TSRMLS_CC);
+	php_my_fdfs_upload_file_impl(INTERNAL_FUNCTION_PARAM_PASSTHRU, \
+		&(i_obj->context), STORAGE_PROTO_CMD_UPLOAD_FILE, \
+		FDFS_UPLOAD_BY_CALLBACK);
+}
+
 ZEND_BEGIN_ARG_INFO_EX(arginfo___construct, 0, 0, 0)
 ZEND_END_ARG_INFO()
 
@@ -826,12 +1019,36 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_get_file_id, 0, 0, 1)
 ZEND_ARG_INFO(0, my_file_id)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_upload_by_filename, 0, 0, 2)
+ZEND_ARG_INFO(0, my_file_id)
+ZEND_ARG_INFO(0, local_filename)
+ZEND_ARG_INFO(0, file_ext_name)
+ZEND_ARG_INFO(0, group_name)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_upload_by_filebuff, 0, 0, 2)
+ZEND_ARG_INFO(0, my_file_id)
+ZEND_ARG_INFO(0, file_buff)
+ZEND_ARG_INFO(0, file_ext_name)
+ZEND_ARG_INFO(0, group_name)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_upload_by_callback, 0, 0, 2)
+ZEND_ARG_INFO(0, my_file_id)
+ZEND_ARG_INFO(0, callback_array)
+ZEND_ARG_INFO(0, file_ext_name)
+ZEND_ARG_INFO(0, group_name)
+ZEND_END_ARG_INFO()
+
 /* {{{ my_fdfs_class_methods */
 #define MY_FDFS_ME(name, args) PHP_ME(MyFastDFSClient, name, args, ZEND_ACC_PUBLIC)
 static zend_function_entry my_fdfs_class_methods[] = {
     MY_FDFS_ME(__construct,        arginfo___construct)
     MY_FDFS_ME(close,              arginfo_close)
     MY_FDFS_ME(get_file_id,        arginfo_get_file_id)
+    MY_FDFS_ME(upload_by_filename, arginfo_upload_by_filename)
+    MY_FDFS_ME(upload_by_filebuff, arginfo_upload_by_filebuff)
+    MY_FDFS_ME(upload_by_callback, arginfo_upload_by_callback)
     { NULL, NULL, NULL }
 };
 #undef MY_FDFS_ME
@@ -953,7 +1170,6 @@ static int load_config_files()
 	zval fdht_namespace;
 	FDFSConfigInfo *pConfigInfo;
 	FDFSConfigInfo *pConfigEnd;
-	int config_count;
 	int result;
 
 	if (zend_get_configuration_directive(ITEM_NAME_CONF_COUNT, 
