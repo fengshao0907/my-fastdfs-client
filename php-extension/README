@@ -1,0 +1,281 @@
+
+Copyright (C) 2012 Happy Fish / YuQing
+
+MyFastDFSClient php extension may be copied only under the terms of 
+the Less GNU General Public License (LGPL).
+
+Please visit the FastDFS Home Page for more detail.
+Google code (English language): http://code.google.com/p/my-fastdfs-client/
+Chinese language: http://www.csource.org/
+
+In file my_fastdfs_client.ini, item my_fastdfs_client.fdfs_config_filename# 
+point to the FastDFS client config filename and 
+my_fastdfs_client.fdht_config_filename# point to the FastDHT client config 
+filename. Please read FastDFS and FastDHT INSTALL files to know about how to
+config FastDFS and FastDHT client.
+
+MyFastDFSClient php extension compiled under PHP 5.2.x, Steps:
+phpize
+./configure
+make
+make install
+
+#copy my_fastdfs_client.ini to PHP etc directory, eg. /etc/php/
+cp my_fastdfs_client.ini /etc/php/
+
+#modify config file my_fastdfs_client.ini, such as:
+vi /etc/php/my_fastdfs_client.ini
+
+#run my_fdfs_client_test.php
+php my_fdfs_client_test.php
+
+MyFastDFSClient PHP functions:
+
+string my_fastdfs_client_version()
+return MyFastDFSClient client library version
+return MyFastDFSClient version
+
+MyFastDFSClient Class Info:
+
+class MyFastDFSClient([int config_index, boolean bMultiThread]);
+MyFastDFSClient class constructor
+params:
+        config_index: use which config file, base 0. default is 0
+        bMultiThread: if in multi-thread, default is false
+
+
+long MyFastDFSClient::get_last_error_no()
+return last error no
+
+
+string MyFastDFSClient::get_last_error_info()
+return last error info
+
+
+void MyFastDFSClient::close()
+close FastDFS adn FastDHT connections if neccessary
+
+
+string MyFastDFSClient::get_file_id(string my_file_id)
+return FastDFS file id
+params:
+	my_file_id: the file id sepcified by application
+return the FastDFS file id if success, return false when error
+
+
+boolean MyFastDFSClient::upload_by_filename(string my_file_id, 
+	string local_filename [, string file_ext_name, string group_name])
+upload file by local filename
+params:
+	my_file_id: the file id sepcified by application
+	local_filename: the local filename to upload
+	file_ext_name: the file extension name without dot
+	group_name: specify group name to upload this file
+return true for success, false for error
+
+
+boolean MyFastDFSClient::upload_by_filebuff(string my_file_id, string file_buff
+	[, string file_ext_name, string group_name])
+upload file by file buffer / content 
+params:
+	my_file_id: the file id sepcified by application
+	file_buff: the file content to upload
+	file_ext_name: the file extension name without dot
+	group_name: specify group name to upload this file
+return true for success, false for error
+
+
+boolean MyFastDFSClient::upload_by_callback(string my_file_id, 
+	array callback_array [, string file_ext_name, string group_name])
+upload file by callback function
+params:
+	my_file_id: the file id sepcified by application
+	callback_array: the callback assoc array, must have keys:
+			callback  - the php upload callback function name
+                                    callback function prototype as:
+				    function upload_file_callback($sock, $args)
+			file_size - the file size
+			args      - use argument for callback function
+	file_ext_name: the file extension name without dot
+	group_name: specify group name to upload this file
+return true for success, false for error
+
+
+boolean MyFastDFSClient::upload_appender_by_filename(string my_appender_id, 
+	string local_filename [, string file_ext_name, string group_name])
+upload appender file by local filename
+params:
+	my_appender_id: the appender file id sepcified by application
+	local_filename: the local filename to upload
+	file_ext_name: the file extension name without dot
+	group_name: specify group name to upload this file
+return true for success, false for error
+
+
+boolean MyFastDFSClient::upload_appender_by_filebuff(string my_appender_id, 
+	string file_buff [, string file_ext_name, string group_name])
+upload appender file by file buffer / content
+params:
+	my_appender_id: the appender file id sepcified by application
+	file_buff: the file content to upload
+	file_ext_name: the file extension name without dot
+	group_name: specify group name to upload this file
+return true for success, false for error
+
+
+boolean MyFastDFSClient::upload_appender_by_callback(string my_appender_id, 
+	array callback_array [, string file_ext_name, string group_name])
+upload appender file by callback function
+params:
+	my_appender_id: the appender file id sepcified by application
+	callback_array: the callback assoc array, must have keys:
+			callback  - the php upload callback function name
+                                    callback function prototype as:
+				    function upload_file_callback($sock, $args)
+			file_size - the file size
+			args      - use argument for callback function
+	file_ext_name: the file extension name without dot
+	group_name: specify group name to upload this file
+return true for success, false for error
+
+
+boolean MyFastDFSClient::delete_file(string my_file_id)
+delete file
+params:
+	my_file_id: the file id sepcified by application
+return true for success, false for error
+
+
+boolean MyFastDFSClient::truncate_file(string my_appender_id 
+	[, long truncated_file_size = 0])
+truncate file to specify size
+params:
+	my_file_id: the file id sepcified by application
+	truncated_file_size: the truncated file size
+return true for success, false for error
+
+
+boolean MyFastDFSClient::get_file_info(string my_file_id 
+	[, long get_from_server = 1])
+get file info from the filename
+params:
+	my_file_id: the file id sepcified by application
+	get_from_server: get file info from sotrage server if neccessay
+return assoc array for success, false for error. 
+	the assoc array including following elements:
+		create_timestamp: the file create timestamp (unix timestamp)
+		file_size: the file size (bytes)
+		source_ip_addr: the source storage server ip address
+		crc32: the crc32 signature of the file
+
+
+boolean MyFastDFSClient::file_exists(string my_file_id)
+check file exists
+params:
+	my_file_id: the file id sepcified by application
+return true for file exists, false for error or not exists
+
+
+string MyFastDFSClient::download_file_to_buff(string my_file_id 
+	[, long file_offset = 0, long download_bytes = 0])
+download file to buffer / get file content
+params:
+	my_file_id: the file id sepcified by application
+	file_offset: file start offset, default value is 0
+	download_bytes: 0 (default value) means from the file offset to the file end
+return file content for success, false for error
+
+
+boolean MyFastDFSClient::download_file_to_file(string my_file_id,
+	string local_filename [, long file_offset = 0, long download_bytes = 0])
+download file to local file
+params:
+	my_file_id: the file id sepcified by application
+	local_filename: the local filename to save
+	file_offset: file start offset, default value is 0
+	download_bytes: 0 (default value) means from the file offset to the file end
+return true for success, false for error
+
+
+boolean MyFastDFSClient::download_file_to_callback(string my_file_id,
+	array callback_array [, long file_offset = 0, long download_bytes = 0])
+download file by callback function
+params:
+	my_file_id: the file id sepcified by application
+	callback_array: the download callback array, elements as:
+			callback  - the php callback function name
+                                    callback function prototype as:
+				    function my_download_file_callback($args, $file_size, $data)
+			args      - use argument for callback function
+	file_offset: file start offset, default value is 0
+	download_bytes: 0 (default value) means from the file offset to the file end
+return true for success, false for error
+
+
+boolean MyFastDFSClient::append_by_filename(string my_appender_id,
+	string local_filename)
+append local file to the appender file of storage server
+parameters:
+	my_appender_id: the appender file id sepcified by application
+	local_filename: the local file to append
+return true for success, false for error
+
+
+boolean MyFastDFSClient::append_by_filebuff(string my_appender_id,
+	string file_buff)
+append file buffer / content to the appender file of storage server
+parameters:
+	my_appender_id: the appender file id sepcified by application
+	file_buff: the file buffer to append
+return true for success, false for error
+
+
+boolean MyFastDFSClient::append_by_callback(string my_appender_id,
+	array callback_array)
+append content to the appender file by callback function
+parameters:
+	my_appender_id: the appender file id sepcified by application
+	callback_array: the callback assoc array, must have keys:
+			callback  - the php upload callback function name
+                                    callback function prototype as:
+				    function upload_file_callback($sock, $args)
+			file_size - the file size
+			args      - use argument for callback function
+return true for success, false for error
+
+
+boolean MyFastDFSClient::modify_by_filename(string my_appender_id,
+	string local_filename, long file_offset)
+modify the appender file by local file
+parameters:
+	my_appender_id: the appender file id sepcified by application
+	local_filename: the local file
+	file_offset: the appender file offset to modify
+return true for success, false for error
+
+
+boolean MyFastDFSClient::modify_by_filebuff(string my_appender_id,
+	string file_buff, long file_offset)
+modify the appender file by buffer
+parameters:
+	my_appender_id: the appender file id sepcified by application
+	file_buff: the file buffer
+	file_offset: the appender file offset to modify
+return true for success, false for error
+
+
+boolean MyFastDFSClient::modify_by_callback(string my_appender_id,
+	array callback_array, long file_offset)
+modify the appender file by callback function
+parameters:
+	my_appender_id: the appender file id sepcified by application
+	callback_array: the callback assoc array, must have keys:
+			callback  - the php upload callback function name
+                                    callback function prototype as:
+				    function upload_file_callback($sock, $args)
+			file_size - the file size
+			args      - use argument for callback function
+	file_offset: the appender file offset to modify
+return true for success, false for error
+
+
