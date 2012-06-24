@@ -961,6 +961,138 @@ static void php_my_fdfs_delete_file_impl( \
 	RETURN_BOOL(true);
 }
 
+static void php_my_fdfs_truncate_file_impl( \
+	INTERNAL_FUNCTION_PARAMETERS, FDFSPhpContext *pContext)
+{
+	int argc;
+	char *my_appender_id;
+	int my_appender_id_len;
+	long truncated_file_size;
+
+    	argc = ZEND_NUM_ARGS();
+	if (argc < 1 || argc > 2)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"truncate_file parameters count: " \
+			"%d < 1 or > 2", __LINE__, argc);
+		pContext->err_no = EINVAL;
+		RETURN_BOOL(false);
+	}
+
+	truncated_file_size = 0;
+	if (zend_parse_parameters(argc TSRMLS_CC, "s|l", \
+		&my_appender_id, &my_appender_id_len, \
+		&truncated_file_size) == FAILURE)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"zend_parse_parameters fail!", __LINE__);
+		pContext->err_no = EINVAL;
+		RETURN_BOOL(false);
+	}
+
+	CHECK_MY_FILE_ID_LEN(pContext, my_appender_id_len);
+
+	pContext->err_no = my_fdfs_truncate_file( \
+		pContext->pMyClientContext, my_appender_id, \
+		truncated_file_size);
+	if (pContext->err_no != 0)
+	{
+		RETURN_BOOL(false);
+	}
+
+	RETURN_BOOL(true);
+}
+
+static void php_my_fdfs_get_file_info_impl( \
+	INTERNAL_FUNCTION_PARAMETERS, FDFSPhpContext *pContext)
+{
+	int argc;
+	char *my_file_id;
+	int my_file_id_len;
+	long get_from_server;
+	FDFSFileInfo file_info;
+
+    	argc = ZEND_NUM_ARGS();
+	if (argc < 1 || argc > 2)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"get_file_info parameters count: " \
+			"%d < 1 or > 2", __LINE__, argc);
+		pContext->err_no = EINVAL;
+		RETURN_BOOL(false);
+	}
+
+	get_from_server = 1;
+	if (zend_parse_parameters(argc TSRMLS_CC, "s|l", \
+		&my_file_id, &my_file_id_len, \
+		&get_from_server) == FAILURE)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"zend_parse_parameters fail!", __LINE__);
+		pContext->err_no = EINVAL;
+		RETURN_BOOL(false);
+	}
+
+	CHECK_MY_FILE_ID_LEN(pContext, my_file_id_len);
+
+	pContext->err_no = my_fdfs_get_file_info_ex( \
+			pContext->pMyClientContext, my_file_id, \
+			get_from_server, &file_info);
+	if (pContext->err_no != 0)
+	{
+		RETURN_BOOL(false);
+	}
+
+	array_init(return_value);
+	add_assoc_long_ex(return_value, "create_timestamp", \
+		sizeof("create_timestamp"), file_info.create_timestamp);
+	add_assoc_long_ex(return_value, "file_size", \
+		sizeof("file_size"), (long)file_info.file_size);
+	add_assoc_stringl_ex(return_value, "source_ip_addr", \
+		sizeof("source_ip_addr"), file_info.source_ip_addr, \
+		strlen(file_info.source_ip_addr), 1);
+	add_assoc_long_ex(return_value, "crc32", \
+		sizeof("crc32"), file_info.crc32);
+}
+
+static void php_my_fdfs_file_exists_impl( \
+	INTERNAL_FUNCTION_PARAMETERS, FDFSPhpContext *pContext)
+{
+	int argc;
+	char *my_file_id;
+	int my_file_id_len;
+
+    	argc = ZEND_NUM_ARGS();
+	if (argc != 1)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"file_exist parameters count: %d != 1", \
+			__LINE__, argc);
+		pContext->err_no = EINVAL;
+		RETURN_BOOL(false);
+	}
+
+	if (zend_parse_parameters(argc TSRMLS_CC, "s", \
+		&my_file_id, &my_file_id_len) == FAILURE)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"zend_parse_parameters fail!", __LINE__);
+		pContext->err_no = EINVAL;
+		RETURN_BOOL(false);
+	}
+
+	CHECK_MY_FILE_ID_LEN(pContext, my_file_id_len);
+
+	pContext->err_no = my_fdfs_file_exist(pContext->pMyClientContext, 
+			my_file_id);
+	if (pContext->err_no != 0)
+	{
+		RETURN_BOOL(false);
+	}
+
+	RETURN_BOOL(true);
+}
+
 /*
 string my_fastdfs_client_version()
 return client library version
@@ -1236,6 +1368,50 @@ PHP_METHOD(MyFastDFSClient, delete_file)
 }
 
 /*
+boolean MyFastDFSClient::truncate_file(string my_appender_id 
+	[, long truncated_file_size = 0])
+return true for success, false for error
+*/
+PHP_METHOD(MyFastDFSClient, truncate_file)
+{
+	zval *object = getThis();
+	php_fdfs_t *i_obj;
+
+	i_obj = (php_fdfs_t *) zend_object_store_get_object(object TSRMLS_CC);
+	php_my_fdfs_truncate_file_impl(INTERNAL_FUNCTION_PARAM_PASSTHRU, \
+		&(i_obj->context));
+}
+
+/*
+boolean MyFastDFSClient::get_file_info(string my_file_id 
+	[, long get_from_server = 1])
+return true for success, false for error
+*/
+PHP_METHOD(MyFastDFSClient, get_file_info)
+{
+	zval *object = getThis();
+	php_fdfs_t *i_obj;
+
+	i_obj = (php_fdfs_t *) zend_object_store_get_object(object TSRMLS_CC);
+	php_my_fdfs_get_file_info_impl(INTERNAL_FUNCTION_PARAM_PASSTHRU, \
+		&(i_obj->context));
+}
+
+/*
+boolean MyFastDFSClient::file_exists(string my_file_id)
+return true for file exists, false for error or not exists
+*/
+PHP_METHOD(MyFastDFSClient, file_exists)
+{
+	zval *object = getThis();
+	php_fdfs_t *i_obj;
+
+	i_obj = (php_fdfs_t *) zend_object_store_get_object(object TSRMLS_CC);
+	php_my_fdfs_file_exists_impl(INTERNAL_FUNCTION_PARAM_PASSTHRU, \
+		&(i_obj->context));
+}
+
+/*
 boolean MyFastDFSClient::download_file_to_buff(string my_file_id 
 	[, long file_offset, long download_bytes])
 return true for success, false for error
@@ -1460,6 +1636,20 @@ ZEND_BEGIN_ARG_INFO_EX(arginfo_delete_file, 0, 0, 1)
 ZEND_ARG_INFO(0, my_file_id)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_file_exists, 0, 0, 1)
+ZEND_ARG_INFO(0, my_file_id)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_truncate_file, 0, 0, 1)
+ZEND_ARG_INFO(0, my_appender_id)
+ZEND_ARG_INFO(0, truncated_file_size)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_get_file_info, 0, 0, 1)
+ZEND_ARG_INFO(0, my_file_id)
+ZEND_ARG_INFO(0, get_from_server)
+ZEND_END_ARG_INFO()
+
 ZEND_BEGIN_ARG_INFO_EX(arginfo_download_file_to_buff, 0, 0, 1)
 ZEND_ARG_INFO(0, my_file_id)
 ZEND_ARG_INFO(0, file_offset)
@@ -1528,6 +1718,9 @@ static zend_function_entry my_fdfs_class_methods[] = {
     MY_FDFS_ME(upload_appender_by_filebuff, arginfo_upload_appender_by_filebuff)
     MY_FDFS_ME(upload_appender_by_callback, arginfo_upload_appender_by_callback)
     MY_FDFS_ME(delete_file,                 arginfo_delete_file)
+    MY_FDFS_ME(truncate_file,               arginfo_truncate_file)
+    MY_FDFS_ME(get_file_info,               arginfo_get_file_info)
+    MY_FDFS_ME(file_exists,                 arginfo_file_exists)
     MY_FDFS_ME(download_file_to_buff,       arginfo_download_file_to_buff)
     MY_FDFS_ME(download_file_to_file,       arginfo_download_file_to_file)
     MY_FDFS_ME(download_file_to_callback,   arginfo_download_file_to_callback)
