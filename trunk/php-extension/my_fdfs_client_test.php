@@ -12,7 +12,10 @@
 	}
 
 	echo 'fdfs_file_id: ' . $myFastDFS->get_file_id($my_file_id) . "\n";
-	echo 'file content: ' . $myFastDFS->download_file_to_buff($my_file_id) . "\n";
+	if ($file_buff=$myFastDFS->download_file_to_buff($my_file_id))
+	{
+		echo 'download file size: ' . strlen($file_buff) . "\n";
+	}
 	echo 'file_exists: ' . $myFastDFS->file_exists($my_file_id) . "\n";
 	echo 'delete_file: ' . $myFastDFS->delete_file($my_file_id) . "\n";
 ?>
