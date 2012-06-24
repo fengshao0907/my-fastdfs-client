@@ -58,10 +58,8 @@ typedef struct
 	int64_t file_size;
 } php_fdfs_upload_callback_t;
 
-/*
 static int php_fdfs_download_callback(void *arg, const int64_t file_size, \
 		const char *data, const int current_size);
-*/
 
 static FDFSConfigInfo *config_list = NULL;
 static int config_count = 0;
@@ -104,6 +102,18 @@ zend_module_entry my_fastdfs_client_module_entry = {
 #ifdef COMPILE_DL_MY_FASTDFS_CLIENT
 	ZEND_GET_MODULE(my_fastdfs_client)
 #endif
+
+#define CHECK_MY_FILE_ID_LEN(pContext, my_file_id_len) \
+	do \
+	{  \
+		if (my_file_id_len == 0) \
+		{ \
+			logError("file: "__FILE__", line: %d, " \
+				"my file id is empty!", __LINE__); \
+			pContext->err_no = EINVAL; \
+			RETURN_BOOL(false); \
+		} \
+	} while (0)
 
 static int php_fdfs_get_callback_from_hash(HashTable *callback_hash, \
 		php_fdfs_callback_t *pCallback)
@@ -184,333 +194,6 @@ static int php_fdfs_get_upload_callback_from_hash(HashTable *callback_hash, \
 	return 0;
 }
 
-/*
-static void php_fdfs_storage_delete_file_impl( \
-		INTERNAL_FUNCTION_PARAMETERS, 
-		FDFSPhpContext *pContext)
-{
-	int argc;
-	char *group_name;
-	char *remote_filename;
-	int group_nlen;
-	int filename_len;
-	zval *tracker_obj;
-	zval *storage_obj;
-	HashTable *tracker_hash;
-	HashTable *storage_hash;
-	TrackerServerInfo tracker_server;
-	TrackerServerInfo storage_server;
-	TrackerServerInfo *pTrackerServer;
-	TrackerServerInfo *pStorageServer;
-	int result;
-	int min_param_count;
-	int max_param_count;
-	int saved_tracker_sock;
-	int saved_storage_sock;
-	char new_file_id[FDFS_GROUP_NAME_MAX_LEN + 128];
-
-	if (bFileId)
-	{
-		min_param_count = 1;
-		max_param_count = 3;
-	}
-	else
-	{
-		min_param_count = 2;
-		max_param_count = 4;
-	}
-
-    	argc = ZEND_NUM_ARGS();
-	if (argc < min_param_count || argc > max_param_count)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"storage_delete_file parameters " \
-			"count: %d < %d or > %d", __LINE__, argc, \
-			min_param_count, max_param_count);
-		pContext->err_no = EINVAL;
-		RETURN_BOOL(false);
-	}
-
-	tracker_obj = NULL;
-	storage_obj = NULL;
-	if (bFileId)
-	{
-		char *pSeperator;
-		char *file_id;
-		int file_id_len;
-
-		if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|aa", \
-			&file_id, &file_id_len, &tracker_obj, &storage_obj) \
-			== FAILURE)
-		{
-			logError("file: "__FILE__", line: %d, " \
-				"zend_parse_parameters fail!", __LINE__);
-			pContext->err_no = EINVAL;
-			RETURN_BOOL(false);
-		}
-
-		snprintf(new_file_id, sizeof(new_file_id), "%s", file_id);
-		pSeperator = strchr(new_file_id, FDFS_FILE_ID_SEPERATOR);
-		if (pSeperator == NULL)
-		{
-			logError("file: "__FILE__", line: %d, " \
-				"file_id is invalid, file_id=%s", \
-				__LINE__, file_id);
-			pContext->err_no = EINVAL;
-			RETURN_BOOL(false);
-		}
-
-		*pSeperator = '\0';
-		group_name = new_file_id;
-		remote_filename =  pSeperator + 1;
-	}
-	else if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ss|aa", \
-		&group_name, &group_nlen, &remote_filename, &filename_len, \
-		&tracker_obj, &storage_obj) == FAILURE)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"zend_parse_parameters fail!", __LINE__);
-		pContext->err_no = EINVAL;
-		RETURN_BOOL(false);
-	}
-
-	if (tracker_obj == NULL)
-	{
-		pTrackerServer = tracker_get_connection_ex(pContext->pMyClientContext);
-		if (pTrackerServer == NULL)
-		{
-			pContext->err_no = ENOENT;
-			RETURN_BOOL(false);
-		}
-		saved_tracker_sock = -1;
-		tracker_hash = NULL;
-	}
-	else
-	{
-		pTrackerServer = &tracker_server;
-		tracker_hash = Z_ARRVAL_P(tracker_obj);
-		if ((result=php_fdfs_get_server_from_hash(tracker_hash, \
-				pTrackerServer)) != 0)
-		{
-			pContext->err_no = result;
-			RETURN_BOOL(false);
-		}
-		saved_tracker_sock = pTrackerServer->sock;
-	}
-
-	if (storage_obj == NULL)
-	{
-		pStorageServer = NULL;
-		storage_hash = NULL;
-		saved_storage_sock = -1;
-	}
-	else
-	{
-		pStorageServer = &storage_server;
-		storage_hash = Z_ARRVAL_P(storage_obj);
-		if ((result=php_fdfs_get_server_from_hash(storage_hash, \
-				pStorageServer)) != 0)
-		{
-			pContext->err_no = result;
-			RETURN_BOOL(false);
-		}
-		saved_storage_sock = pStorageServer->sock;
-	}
-
-	result = storage_delete_file(pTrackerServer, pStorageServer, \
-			group_name, remote_filename);
-	if (tracker_hash != NULL && pTrackerServer->sock != \
-		saved_tracker_sock)
-	{
-		CLEAR_HASH_SOCK_FIELD(tracker_hash)
-	}
-	if (pStorageServer != NULL && pStorageServer->sock != \
-		saved_storage_sock)
-	{
-		CLEAR_HASH_SOCK_FIELD(storage_hash)
-	}
-
-	pContext->err_no = result;
-	if (result != 0)
-	{
-		RETURN_BOOL(false);
-	}
-
-	RETURN_BOOL(true);
-}
-
-static void php_fdfs_storage_download_file_to_callback_impl( \
-	INTERNAL_FUNCTION_PARAMETERS, FDFSPhpContext *pContext)
-{
-	int argc;
-	char *group_name;
-	char *remote_filename;
-	zval *download_callback;
-	int group_nlen;
-	int filename_len;
-	long file_offset;
-	long download_bytes;
-	int64_t file_size;
-	zval *tracker_obj;
-	zval *storage_obj;
-	HashTable *tracker_hash;
-	HashTable *storage_hash;
-	TrackerServerInfo tracker_server;
-	TrackerServerInfo storage_server;
-	TrackerServerInfo *pTrackerServer;
-	TrackerServerInfo *pStorageServer;
-	HashTable *callback_hash;
-	php_fdfs_callback_t php_callback;
-	int result;
-	int min_param_count;
-	int max_param_count;
-	int saved_tracker_sock;
-	int saved_storage_sock;
-	char new_file_id[FDFS_GROUP_NAME_MAX_LEN + 128];
-
-	if (bFileId)
-	{
-		min_param_count = 2;
-		max_param_count = 6;
-	}
-	else
-	{
-		min_param_count = 3;
-		max_param_count = 7;
-	}
-
-    	argc = ZEND_NUM_ARGS();
-	if (argc < min_param_count || argc > max_param_count)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"storage_download_file_to_buff parameters " \
-			"count: %d < %d or > %d", __LINE__, argc, \
-			min_param_count, max_param_count);
-		pContext->err_no = EINVAL;
-		RETURN_BOOL(false);
-	}
-
-	file_offset = 0;
-	download_bytes = 0;
-	tracker_obj = NULL;
-	storage_obj = NULL;
-	if (bFileId)
-	{
-		char *pSeperator;
-		char *file_id;
-		int file_id_len;
-
-		if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, \
-			"sa|llaa", &file_id, &file_id_len, \
-			&download_callback, &file_offset, &download_bytes, \
-			&tracker_obj, &storage_obj) == FAILURE)
-		{
-			logError("file: "__FILE__", line: %d, " \
-				"zend_parse_parameters fail!", __LINE__);
-			pContext->err_no = EINVAL;
-			RETURN_BOOL(false);
-		}
-
-		snprintf(new_file_id, sizeof(new_file_id), "%s", file_id);
-		pSeperator = strchr(new_file_id, FDFS_FILE_ID_SEPERATOR);
-		if (pSeperator == NULL)
-		{
-			logError("file: "__FILE__", line: %d, " \
-				"file_id is invalid, file_id=%s", \
-				__LINE__, file_id);
-			pContext->err_no = EINVAL;
-			RETURN_BOOL(false);
-		}
-
-		*pSeperator = '\0';
-		group_name = new_file_id;
-		remote_filename =  pSeperator + 1;
-	}
-	else if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "ssa|llaa", \
-		&group_name, &group_nlen, &remote_filename, &filename_len, \
-		&download_callback, &file_offset, &download_bytes, \
-		&tracker_obj, &storage_obj) == FAILURE)
-	{
-		logError("file: "__FILE__", line: %d, " \
-			"zend_parse_parameters fail!", __LINE__);
-		pContext->err_no = EINVAL;
-		RETURN_BOOL(false);
-	}
-
-	if (tracker_obj == NULL)
-	{
-		pTrackerServer = tracker_get_connection_ex(pContext->pMyClientContext);
-		if (pTrackerServer == NULL)
-		{
-			pContext->err_no = ENOENT;
-			RETURN_BOOL(false);
-		}
-		saved_tracker_sock = -1;
-		tracker_hash = NULL;
-	}
-	else
-	{
-		pTrackerServer = &tracker_server;
-		tracker_hash = Z_ARRVAL_P(tracker_obj);
-		if ((result=php_fdfs_get_server_from_hash(tracker_hash, \
-				pTrackerServer)) != 0)
-		{
-			pContext->err_no = result;
-			RETURN_BOOL(false);
-		}
-		saved_tracker_sock = pTrackerServer->sock;
-	}
-
-	if (storage_obj == NULL)
-	{
-		pStorageServer = NULL;
-		storage_hash = NULL;
-		saved_storage_sock = -1;
-	}
-	else
-	{
-		pStorageServer = &storage_server;
-		storage_hash = Z_ARRVAL_P(storage_obj);
-		if ((result=php_fdfs_get_server_from_hash(storage_hash, \
-				pStorageServer)) != 0)
-		{
-			pContext->err_no = result;
-			RETURN_BOOL(false);
-		}
-		saved_storage_sock = pStorageServer->sock;
-	}
-
-	callback_hash = Z_ARRVAL_P(download_callback);
-	result = php_fdfs_get_callback_from_hash(callback_hash, \
-				&php_callback);
-	if (result != 0)
-	{
-		pContext->err_no = result;
-		RETURN_BOOL(false);
-	}
-
-	result = storage_download_file_ex(pTrackerServer, pStorageServer, \
-		group_name, remote_filename, file_offset, download_bytes, \
-		php_fdfs_download_callback, (void *)&php_callback, &file_size);
-	if (tracker_hash != NULL && pTrackerServer->sock != saved_tracker_sock)
-	{
-		CLEAR_HASH_SOCK_FIELD(tracker_hash)
-	}
-	if (pStorageServer != NULL && pStorageServer->sock != \
-		saved_storage_sock)
-	{
-		CLEAR_HASH_SOCK_FIELD(storage_hash)
-	}
-
-	if (result != 0)
-	{
-		pContext->err_no = result;
-		RETURN_BOOL(false);
-	}
-	RETURN_BOOL(true);
-}
-*/
-
 static int php_fdfs_upload_callback(void *arg, const int64_t file_size, int sock)
 {
 	php_fdfs_upload_callback_t *pUploadCallback;
@@ -557,7 +240,6 @@ static int php_fdfs_upload_callback(void *arg, const int64_t file_size, int sock
 	return result;
 }
 
-/*
 static int php_fdfs_download_callback(void *arg, const int64_t file_size, \
 		const char *data, const int current_size)
 {
@@ -606,19 +288,6 @@ static int php_fdfs_download_callback(void *arg, const int64_t file_size, \
 
 	return result;
 }
-*/
-
-#define CHECK_MY_FILE_ID_LEN(pContext, my_file_id_len) \
-	do \
-	{  \
-		if (my_file_id_len == 0) \
-		{ \
-			logError("file: "__FILE__", line: %d, " \
-				"my file id is empty!", __LINE__); \
-			pContext->err_no = EINVAL; \
-			RETURN_BOOL(false); \
-		} \
-	} while (0)
 
 static void php_my_fdfs_get_file_id_impl( \
 	INTERNAL_FUNCTION_PARAMETERS, FDFSPhpContext *pContext)
@@ -796,6 +465,219 @@ static void php_my_fdfs_upload_file_impl(INTERNAL_FUNCTION_PARAMETERS, \
 	{
 		RETURN_BOOL(false);
 	}
+
+}
+
+static void php_my_fdfs_download_file_to_buff_impl( \
+	INTERNAL_FUNCTION_PARAMETERS, FDFSPhpContext *pContext)
+{
+	int argc;
+	char *my_file_id;
+	char *file_buff;
+	char *new_file_buff;
+	int my_file_id_len;
+	long file_offset;
+	long download_bytes;
+	int64_t file_size;
+
+	argc = ZEND_NUM_ARGS();
+	if (argc < 1 || argc > 3)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"download_file_to_buff parameters " \
+			"count: %d < 1 or > 3", \
+			__LINE__, argc);
+		pContext->err_no = EINVAL;
+		RETURN_BOOL(false);
+	}
+
+	my_file_id = NULL;
+	file_offset = 0;
+	download_bytes = 0;
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, \
+		"s|ll", &my_file_id, &my_file_id_len, &file_offset, \
+		&download_bytes) == FAILURE)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"zend_parse_parameters fail!", __LINE__);
+		pContext->err_no = EINVAL;
+		RETURN_BOOL(false);
+	}
+
+	CHECK_MY_FILE_ID_LEN(pContext, my_file_id_len);
+
+	pContext->err_no = my_fdfs_do_download_file_ex( \
+		pContext->pMyClientContext, FDFS_DOWNLOAD_TO_BUFF, \
+		my_file_id, file_offset, download_bytes, &file_buff, \
+		NULL, &file_size);
+	if (pContext->err_no != 0)
+	{
+		RETURN_BOOL(false);
+	}
+
+	new_file_buff = (char *)emalloc(file_size + 1);
+	if (new_file_buff == NULL)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"emalloc %d bytes fail, errno: %d, error info: %s", \
+			__LINE__, (int)file_size + 1, errno, STRERROR(errno));
+		free(file_buff);
+		pContext->err_no = errno != 0 ? errno : ENOMEM;
+		RETURN_BOOL(false);
+	}
+
+	memcpy(new_file_buff, file_buff, file_size);
+	*(new_file_buff + file_size) = '\0';
+	free(file_buff);
+
+	RETURN_STRINGL(new_file_buff, file_size, 0);
+}
+
+static void php_my_fdfs_download_file_to_file_impl( \
+	INTERNAL_FUNCTION_PARAMETERS, FDFSPhpContext *pContext)
+{
+	int argc;
+	char *my_file_id;
+	char *local_filename;
+	int my_file_id_len;
+	int filename_len;
+	long file_offset;
+	long download_bytes;
+	int64_t file_size;
+
+	argc = ZEND_NUM_ARGS();
+	if (argc < 2 || argc > 4)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"download_file_to_buff parameters " \
+			"count: %d < 1 or > 3", \
+			__LINE__, argc);
+		pContext->err_no = EINVAL;
+		RETURN_BOOL(false);
+	}
+
+	my_file_id = NULL;
+	file_offset = 0;
+	download_bytes = 0;
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, \
+		"ss|ll", &my_file_id, &my_file_id_len, &local_filename, \
+		&filename_len, &file_offset, &download_bytes) == FAILURE)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"zend_parse_parameters fail!", __LINE__);
+		pContext->err_no = EINVAL;
+		RETURN_BOOL(false);
+	}
+
+	CHECK_MY_FILE_ID_LEN(pContext, my_file_id_len);
+
+	pContext->err_no = my_fdfs_do_download_file_ex( \
+		pContext->pMyClientContext, FDFS_DOWNLOAD_TO_FILE, \
+		my_file_id, file_offset, download_bytes, &local_filename, \
+		NULL, &file_size);
+	if (pContext->err_no != 0)
+	{
+		RETURN_BOOL(false);
+	}
+
+	RETURN_BOOL(true);
+}
+
+static void php_my_fdfs_download_file_to_callback_impl( \
+	INTERNAL_FUNCTION_PARAMETERS, FDFSPhpContext *pContext)
+{
+	int argc;
+	char *my_file_id;
+	zval *download_callback;
+	HashTable *callback_hash;
+	php_fdfs_callback_t php_callback;
+	int my_file_id_len;
+	long file_offset;
+	long download_bytes;
+	int64_t file_size;
+
+	argc = ZEND_NUM_ARGS();
+	if (argc < 2 || argc > 4)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"download_file_to_buff parameters " \
+			"count: %d < 1 or > 3", \
+			__LINE__, argc);
+		pContext->err_no = EINVAL;
+		RETURN_BOOL(false);
+	}
+
+	my_file_id = NULL;
+	file_offset = 0;
+	download_bytes = 0;
+	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, \
+		"sa|ll", &my_file_id, &my_file_id_len, &download_callback, \
+		&file_offset, &download_bytes) == FAILURE)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"zend_parse_parameters fail!", __LINE__);
+		pContext->err_no = EINVAL;
+		RETURN_BOOL(false);
+	}
+
+	CHECK_MY_FILE_ID_LEN(pContext, my_file_id_len);
+
+	callback_hash = Z_ARRVAL_P(download_callback);
+	pContext->err_no = php_fdfs_get_callback_from_hash(callback_hash, \
+			&php_callback);
+	if (pContext->err_no != 0)
+	{
+		RETURN_BOOL(false);
+	}
+
+	pContext->err_no = my_fdfs_download_file_ex( \
+		pContext->pMyClientContext, my_file_id, file_offset, \
+		download_bytes, php_fdfs_download_callback, \
+		(void *)&php_callback, &file_size);
+	if (pContext->err_no != 0)
+	{
+		RETURN_BOOL(false);
+	}
+
+	RETURN_BOOL(true);
+}
+
+static void php_my_fdfs_delete_file_impl( \
+	INTERNAL_FUNCTION_PARAMETERS, FDFSPhpContext *pContext)
+{
+	int argc;
+	char *my_file_id;
+	int my_file_id_len;
+
+    	argc = ZEND_NUM_ARGS();
+	if (argc != 1)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"delete_file parameters count: %d != 1", \
+			__LINE__, argc);
+		pContext->err_no = EINVAL;
+		RETURN_BOOL(false);
+	}
+
+	if (zend_parse_parameters(argc TSRMLS_CC, "s", \
+		&my_file_id, &my_file_id_len) == FAILURE)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"zend_parse_parameters fail!", __LINE__);
+		pContext->err_no = EINVAL;
+		RETURN_BOOL(false);
+	}
+
+	CHECK_MY_FILE_ID_LEN(pContext, my_file_id_len);
+
+	pContext->err_no = my_fdfs_delete_file(pContext->pMyClientContext, 
+			my_file_id);
+	if (pContext->err_no != 0)
+	{
+		RETURN_BOOL(false);
+	}
+
+	RETURN_BOOL(true);
 }
 
 /*
@@ -1059,6 +941,65 @@ PHP_METHOD(MyFastDFSClient, upload_appender_by_callback)
 }
 
 /*
+boolean MyFastDFSClient::delete_file(string my_file_id)
+return true for success, false for error
+*/
+PHP_METHOD(MyFastDFSClient, delete_file)
+{
+	zval *object = getThis();
+	php_fdfs_t *i_obj;
+
+	i_obj = (php_fdfs_t *) zend_object_store_get_object(object TSRMLS_CC);
+	php_my_fdfs_delete_file_impl(INTERNAL_FUNCTION_PARAM_PASSTHRU, \
+		&(i_obj->context));
+}
+
+/*
+boolean MyFastDFSClient::download_file_to_buff(string my_file_id 
+	[, long file_offset, long download_bytes])
+return true for success, false for error
+*/
+PHP_METHOD(MyFastDFSClient, download_file_to_buff)
+{
+	zval *object = getThis();
+	php_fdfs_t *i_obj;
+
+	i_obj = (php_fdfs_t *) zend_object_store_get_object(object TSRMLS_CC);
+	php_my_fdfs_download_file_to_buff_impl(INTERNAL_FUNCTION_PARAM_PASSTHRU, \
+		&(i_obj->context));
+}
+
+/*
+boolean MyFastDFSClient::download_file_to_file(string my_file_id,
+	string local_filename [, long file_offset, long download_bytes])
+return true for success, false for error
+*/
+PHP_METHOD(MyFastDFSClient, download_file_to_file)
+{
+	zval *object = getThis();
+	php_fdfs_t *i_obj;
+
+	i_obj = (php_fdfs_t *) zend_object_store_get_object(object TSRMLS_CC);
+	php_my_fdfs_download_file_to_file_impl(INTERNAL_FUNCTION_PARAM_PASSTHRU, \
+		&(i_obj->context));
+}
+
+/*
+boolean MyFastDFSClient::download_file_to_callback(string my_file_id,
+	array callback_array [, long file_offset, long download_bytes])
+return true for success, false for error
+*/
+PHP_METHOD(MyFastDFSClient, download_file_to_callback)
+{
+	zval *object = getThis();
+	php_fdfs_t *i_obj;
+
+	i_obj = (php_fdfs_t *) zend_object_store_get_object(object TSRMLS_CC);
+	php_my_fdfs_download_file_to_callback_impl(INTERNAL_FUNCTION_PARAM_PASSTHRU, \
+		&(i_obj->context));
+}
+
+/*
 long MyFastDFSClient::get_last_error_no()
 return last error no
 */
@@ -1144,6 +1085,30 @@ ZEND_ARG_INFO(0, file_ext_name)
 ZEND_ARG_INFO(0, group_name)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_delete_file, 0, 0, 1)
+ZEND_ARG_INFO(0, my_file_id)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_download_file_to_buff, 0, 0, 1)
+ZEND_ARG_INFO(0, my_file_id)
+ZEND_ARG_INFO(0, file_offset)
+ZEND_ARG_INFO(0, download_bytes)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_download_file_to_file, 0, 0, 2)
+ZEND_ARG_INFO(0, my_file_id)
+ZEND_ARG_INFO(0, local_filename)
+ZEND_ARG_INFO(0, file_offset)
+ZEND_ARG_INFO(0, download_bytes)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_download_file_to_callback, 0, 0, 2)
+ZEND_ARG_INFO(0, my_file_id)
+ZEND_ARG_INFO(0, callback_array)
+ZEND_ARG_INFO(0, file_offset)
+ZEND_ARG_INFO(0, download_bytes)
+ZEND_END_ARG_INFO()
+
 /* {{{ my_fdfs_class_methods */
 #define MY_FDFS_ME(name, args) PHP_ME(MyFastDFSClient, name, args, ZEND_ACC_PUBLIC)
 static zend_function_entry my_fdfs_class_methods[] = {
@@ -1158,6 +1123,10 @@ static zend_function_entry my_fdfs_class_methods[] = {
     MY_FDFS_ME(upload_appender_by_filename, arginfo_upload_appender_by_filename)
     MY_FDFS_ME(upload_appender_by_filebuff, arginfo_upload_appender_by_filebuff)
     MY_FDFS_ME(upload_appender_by_callback, arginfo_upload_appender_by_callback)
+    MY_FDFS_ME(delete_file,                 arginfo_delete_file)
+    MY_FDFS_ME(download_file_to_buff,       arginfo_download_file_to_buff)
+    MY_FDFS_ME(download_file_to_file,       arginfo_download_file_to_file)
+    MY_FDFS_ME(download_file_to_callback,   arginfo_download_file_to_callback)
     { NULL, NULL, NULL }
 };
 #undef MY_FDFS_ME
