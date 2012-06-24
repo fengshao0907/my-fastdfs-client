@@ -1217,22 +1217,6 @@ static PHP_METHOD(MyFastDFSClient, __construct)
 }
 
 /*
-array MyFastDFSClient::tracker_get_connection()
-return array for success, false for error
-*/
-PHP_METHOD(MyFastDFSClient, tracker_get_connection)
-{
-	zval *object = getThis();
-	php_fdfs_t *i_obj;
-
-	i_obj = (php_fdfs_t *) zend_object_store_get_object(object TSRMLS_CC);
-	/*
-	php_fdfs_tracker_get_connection_impl(INTERNAL_FUNCTION_PARAM_PASSTHRU, \
-				&(i_obj->context));
-	*/
-}
-
-/*
 void MyFastDFSClient::close()
 */
 PHP_METHOD(MyFastDFSClient, close)
@@ -1306,7 +1290,7 @@ PHP_METHOD(MyFastDFSClient, upload_by_callback)
 }
 
 /*
-boolean MyFastDFSClient::upload_appender_by_filename(string my_file_id, 
+boolean MyFastDFSClient::upload_appender_by_filename(string my_appender_id, 
 	string local_filename [, string file_ext_name, string group_name])
 return true for success, false for error
 */
@@ -1322,8 +1306,8 @@ PHP_METHOD(MyFastDFSClient, upload_appender_by_filename)
 }
 
 /*
-boolean MyFastDFSClient::upload_appender_by_filebuff(string my_file_id, string file_buff
-	[, string file_ext_name, string group_name])
+boolean MyFastDFSClient::upload_appender_by_filebuff(string my_appender_id, 
+	string file_buff [, string file_ext_name, string group_name])
 return true for success, false for error
 */
 PHP_METHOD(MyFastDFSClient, upload_appender_by_filebuff)
@@ -1338,7 +1322,7 @@ PHP_METHOD(MyFastDFSClient, upload_appender_by_filebuff)
 }
 
 /*
-boolean MyFastDFSClient::upload_appender_by_callback(string my_file_id, 
+boolean MyFastDFSClient::upload_appender_by_callback(string my_appender_id, 
 	array callback_array [, string file_ext_name, string group_name])
 return true for success, false for error
 */
@@ -1412,9 +1396,9 @@ PHP_METHOD(MyFastDFSClient, file_exists)
 }
 
 /*
-boolean MyFastDFSClient::download_file_to_buff(string my_file_id 
-	[, long file_offset, long download_bytes])
-return true for success, false for error
+string MyFastDFSClient::download_file_to_buff(string my_file_id 
+	[, long file_offset = 0, long download_bytes = 0])
+return file content for success, false for error
 */
 PHP_METHOD(MyFastDFSClient, download_file_to_buff)
 {
@@ -1428,7 +1412,7 @@ PHP_METHOD(MyFastDFSClient, download_file_to_buff)
 
 /*
 boolean MyFastDFSClient::download_file_to_file(string my_file_id,
-	string local_filename [, long file_offset, long download_bytes])
+	string local_filename [, long file_offset = 0, long download_bytes = 0])
 return true for success, false for error
 */
 PHP_METHOD(MyFastDFSClient, download_file_to_file)
@@ -1443,7 +1427,7 @@ PHP_METHOD(MyFastDFSClient, download_file_to_file)
 
 /*
 boolean MyFastDFSClient::download_file_to_callback(string my_file_id,
-	array callback_array [, long file_offset, long download_bytes])
+	array callback_array [, long file_offset = 0, long download_bytes = 0])
 return true for success, false for error
 */
 PHP_METHOD(MyFastDFSClient, download_file_to_callback)
