@@ -443,8 +443,8 @@ static void php_my_fdfs_upload_file_impl(INTERNAL_FUNCTION_PARAMETERS, \
 		php_fdfs_upload_callback_t php_callback;
 
 		callback_hash = Z_ARRVAL_P(callback_obj);
-		result = php_fdfs_get_upload_callback_from_hash(callback_hash, \
-				&php_callback);
+		result = php_fdfs_get_upload_callback_from_hash( \
+				callback_hash, &php_callback);
 		if (result != 0)
 		{
 			pContext->err_no = result;
@@ -610,7 +610,7 @@ static void php_my_fdfs_download_file_to_callback_impl( \
 	my_file_id = NULL;
 	file_offset = 0;
 	download_bytes = 0;
-	if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, \
+	if (zend_parse_parameters(argc TSRMLS_CC, \
 		"sa|ll", &my_file_id, &my_file_id_len, &download_callback, \
 		&file_offset, &download_bytes) == FAILURE)
 	{
@@ -623,8 +623,8 @@ static void php_my_fdfs_download_file_to_callback_impl( \
 	CHECK_MY_FILE_ID_LEN(pContext, my_file_id_len);
 
 	callback_hash = Z_ARRVAL_P(download_callback);
-	pContext->err_no = php_fdfs_get_callback_from_hash(callback_hash, \
-			&php_callback);
+	pContext->err_no = php_fdfs_get_callback_from_hash( \
+			callback_hash, &php_callback);
 	if (pContext->err_no != 0)
 	{
 		RETURN_BOOL(false);
@@ -634,6 +634,287 @@ static void php_my_fdfs_download_file_to_callback_impl( \
 		pContext->pMyClientContext, my_file_id, file_offset, \
 		download_bytes, php_fdfs_download_callback, \
 		(void *)&php_callback, &file_size);
+	if (pContext->err_no != 0)
+	{
+		RETURN_BOOL(false);
+	}
+
+	RETURN_BOOL(true);
+}
+
+static void php_my_fdfs_append_by_filename_impl( \
+	INTERNAL_FUNCTION_PARAMETERS, FDFSPhpContext *pContext)
+{
+	int argc;
+	char *my_appender_id;
+	char *local_filename;
+	int my_appender_id_len;
+	int filename_len;
+
+	argc = ZEND_NUM_ARGS();
+	if (argc != 2)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"append_by_filename parameters " \
+			"count: %d != 2", __LINE__, argc);
+		pContext->err_no = EINVAL;
+		RETURN_BOOL(false);
+	}
+
+	my_appender_id = NULL;
+	if (zend_parse_parameters(argc TSRMLS_CC, \
+		"ss", &my_appender_id, &my_appender_id_len, \
+		&local_filename, &filename_len) == FAILURE)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"zend_parse_parameters fail!", __LINE__);
+		pContext->err_no = EINVAL;
+		RETURN_BOOL(false);
+	}
+
+	CHECK_MY_FILE_ID_LEN(pContext, my_appender_id_len);
+
+	pContext->err_no = my_fdfs_append_by_filename( \
+		pContext->pMyClientContext, my_appender_id, \
+		local_filename);
+	if (pContext->err_no != 0)
+	{
+		RETURN_BOOL(false);
+	}
+
+	RETURN_BOOL(true);
+}
+
+static void php_my_fdfs_append_by_filebuff_impl( \
+	INTERNAL_FUNCTION_PARAMETERS, FDFSPhpContext *pContext)
+{
+	int argc;
+	char *my_appender_id;
+	char *file_buff;
+	int my_appender_id_len;
+	long buff_len;
+
+	argc = ZEND_NUM_ARGS();
+	if (argc != 2)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"append_by_filebuff parameters " \
+			"count: %d != 2", __LINE__, argc);
+		pContext->err_no = EINVAL;
+		RETURN_BOOL(false);
+	}
+
+	my_appender_id = NULL;
+	if (zend_parse_parameters(argc TSRMLS_CC, \
+		"ss", &my_appender_id, &my_appender_id_len, \
+		&file_buff, &buff_len) == FAILURE)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"zend_parse_parameters fail!", __LINE__);
+		pContext->err_no = EINVAL;
+		RETURN_BOOL(false);
+	}
+
+	CHECK_MY_FILE_ID_LEN(pContext, my_appender_id_len);
+
+	pContext->err_no = my_fdfs_append_by_filebuff( \
+		pContext->pMyClientContext, my_appender_id, \
+		file_buff, buff_len);
+	if (pContext->err_no != 0)
+	{
+		RETURN_BOOL(false);
+	}
+
+	RETURN_BOOL(true);
+}
+
+static void php_my_fdfs_append_by_callback_impl( \
+	INTERNAL_FUNCTION_PARAMETERS, FDFSPhpContext *pContext)
+{
+	int argc;
+	char *my_appender_id;
+	zval *upload_callback;
+	HashTable *callback_hash;
+	php_fdfs_upload_callback_t php_callback;
+	int my_appender_id_len;
+
+	argc = ZEND_NUM_ARGS();
+	if (argc != 2)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"append_by_callback parameters " \
+			"count: %d != 2", __LINE__, argc);
+		pContext->err_no = EINVAL;
+		RETURN_BOOL(false);
+	}
+
+	my_appender_id = NULL;
+	if (zend_parse_parameters(argc TSRMLS_CC, \
+		"sa", &my_appender_id, &my_appender_id_len, \
+		&upload_callback) == FAILURE)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"zend_parse_parameters fail!", __LINE__);
+		pContext->err_no = EINVAL;
+		RETURN_BOOL(false);
+	}
+
+	CHECK_MY_FILE_ID_LEN(pContext, my_appender_id_len);
+
+	callback_hash = Z_ARRVAL_P(upload_callback);
+	pContext->err_no = php_fdfs_get_upload_callback_from_hash( \
+			callback_hash, &php_callback);
+	if (pContext->err_no != 0)
+	{
+		RETURN_BOOL(false);
+	}
+
+	pContext->err_no = my_fdfs_append_by_callback( \
+		pContext->pMyClientContext, my_appender_id, \
+		php_fdfs_upload_callback, (void *)&php_callback, \
+		php_callback.file_size);
+	if (pContext->err_no != 0)
+	{
+		RETURN_BOOL(false);
+	}
+
+	RETURN_BOOL(true);
+}
+
+static void php_my_fdfs_modify_by_filename_impl( \
+	INTERNAL_FUNCTION_PARAMETERS, FDFSPhpContext *pContext)
+{
+	int argc;
+	char *my_appender_id;
+	char *local_filename;
+	long file_offset;
+	int my_appender_id_len;
+	int filename_len;
+
+	argc = ZEND_NUM_ARGS();
+	if (argc != 3)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"modify_by_filename parameters " \
+			"count: %d != 3", __LINE__, argc);
+		pContext->err_no = EINVAL;
+		RETURN_BOOL(false);
+	}
+
+	my_appender_id = NULL;
+	if (zend_parse_parameters(argc TSRMLS_CC, \
+		"ssl", &my_appender_id, &my_appender_id_len, \
+		&local_filename, &filename_len, &file_offset) == FAILURE)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"zend_parse_parameters fail!", __LINE__);
+		pContext->err_no = EINVAL;
+		RETURN_BOOL(false);
+	}
+
+	CHECK_MY_FILE_ID_LEN(pContext, my_appender_id_len);
+
+	pContext->err_no = my_fdfs_modify_by_filename( \
+		pContext->pMyClientContext, my_appender_id, \
+		local_filename, file_offset);
+	if (pContext->err_no != 0)
+	{
+		RETURN_BOOL(false);
+	}
+
+	RETURN_BOOL(true);
+}
+
+static void php_my_fdfs_modify_by_filebuff_impl( \
+	INTERNAL_FUNCTION_PARAMETERS, FDFSPhpContext *pContext)
+{
+	int argc;
+	char *my_appender_id;
+	char *file_buff;
+	long file_offset;
+	int my_appender_id_len;
+	int buff_len;
+
+	argc = ZEND_NUM_ARGS();
+	if (argc != 3)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"modify_by_filebuff parameters " \
+			"count: %d != 3", __LINE__, argc);
+		pContext->err_no = EINVAL;
+		RETURN_BOOL(false);
+	}
+
+	my_appender_id = NULL;
+	if (zend_parse_parameters(argc TSRMLS_CC, \
+		"ssl", &my_appender_id, &my_appender_id_len, \
+		&file_buff, &buff_len, &file_offset) == FAILURE)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"zend_parse_parameters fail!", __LINE__);
+		pContext->err_no = EINVAL;
+		RETURN_BOOL(false);
+	}
+
+	CHECK_MY_FILE_ID_LEN(pContext, my_appender_id_len);
+
+	pContext->err_no = my_fdfs_modify_by_filebuff( \
+		pContext->pMyClientContext, my_appender_id, \
+		file_buff, file_offset, buff_len);
+	if (pContext->err_no != 0)
+	{
+		RETURN_BOOL(false);
+	}
+
+	RETURN_BOOL(true);
+}
+
+static void php_my_fdfs_modify_by_callback_impl( \
+	INTERNAL_FUNCTION_PARAMETERS, FDFSPhpContext *pContext)
+{
+	int argc;
+	char *my_appender_id;
+	zval *upload_callback;
+	long file_offset;
+	HashTable *callback_hash;
+	php_fdfs_upload_callback_t php_callback;
+	int my_appender_id_len;
+
+	argc = ZEND_NUM_ARGS();
+	if (argc != 3)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"modify_by_callback parameters " \
+			"count: %d != 3", __LINE__, argc);
+		pContext->err_no = EINVAL;
+		RETURN_BOOL(false);
+	}
+
+	my_appender_id = NULL;
+	if (zend_parse_parameters(argc TSRMLS_CC, \
+		"sal", &my_appender_id, &my_appender_id_len, \
+		&upload_callback, &file_offset) == FAILURE)
+	{
+		logError("file: "__FILE__", line: %d, " \
+			"zend_parse_parameters fail!", __LINE__);
+		pContext->err_no = EINVAL;
+		RETURN_BOOL(false);
+	}
+
+	CHECK_MY_FILE_ID_LEN(pContext, my_appender_id_len);
+
+	callback_hash = Z_ARRVAL_P(upload_callback);
+	pContext->err_no = php_fdfs_get_upload_callback_from_hash( \
+			callback_hash, &php_callback);
+	if (pContext->err_no != 0)
+	{
+		RETURN_BOOL(false);
+	}
+
+	pContext->err_no = my_fdfs_modify_by_callback( \
+		pContext->pMyClientContext, my_appender_id, \
+		php_fdfs_upload_callback, (void *)&php_callback, \
+		file_offset, php_callback.file_size);
 	if (pContext->err_no != 0)
 	{
 		RETURN_BOOL(false);
@@ -1000,6 +1281,96 @@ PHP_METHOD(MyFastDFSClient, download_file_to_callback)
 }
 
 /*
+boolean MyFastDFSClient::append_by_filename(string my_appender_id,
+	string local_filename)
+return true for success, false for error
+*/
+PHP_METHOD(MyFastDFSClient, append_by_filename)
+{
+	zval *object = getThis();
+	php_fdfs_t *i_obj;
+
+	i_obj = (php_fdfs_t *) zend_object_store_get_object(object TSRMLS_CC);
+	php_my_fdfs_append_by_filename_impl( \
+		INTERNAL_FUNCTION_PARAM_PASSTHRU, &(i_obj->context));
+}
+
+/*
+boolean MyFastDFSClient::append_by_filebuff(string my_appender_id,
+	string file_buff)
+return true for success, false for error
+*/
+PHP_METHOD(MyFastDFSClient, append_by_filebuff)
+{
+	zval *object = getThis();
+	php_fdfs_t *i_obj;
+
+	i_obj = (php_fdfs_t *) zend_object_store_get_object(object TSRMLS_CC);
+	php_my_fdfs_append_by_filebuff_impl( \
+		INTERNAL_FUNCTION_PARAM_PASSTHRU, &(i_obj->context));
+}
+
+/*
+boolean MyFastDFSClient::append_by_callback(string my_appender_id,
+	array callback_array)
+return true for success, false for error
+*/
+PHP_METHOD(MyFastDFSClient, append_by_callback)
+{
+	zval *object = getThis();
+	php_fdfs_t *i_obj;
+
+	i_obj = (php_fdfs_t *) zend_object_store_get_object(object TSRMLS_CC);
+	php_my_fdfs_append_by_callback_impl( \
+		INTERNAL_FUNCTION_PARAM_PASSTHRU, &(i_obj->context));
+}
+
+/*
+boolean MyFastDFSClient::modify_by_filename(string my_appender_id,
+	string local_filename, long file_offset)
+return true for success, false for error
+*/
+PHP_METHOD(MyFastDFSClient, modify_by_filename)
+{
+	zval *object = getThis();
+	php_fdfs_t *i_obj;
+
+	i_obj = (php_fdfs_t *) zend_object_store_get_object(object TSRMLS_CC);
+	php_my_fdfs_modify_by_filename_impl( \
+		INTERNAL_FUNCTION_PARAM_PASSTHRU, &(i_obj->context));
+}
+
+/*
+boolean MyFastDFSClient::modify_by_filebuff(string my_appender_id,
+	string file_buff, long file_offset)
+return true for success, false for error
+*/
+PHP_METHOD(MyFastDFSClient, modify_by_filebuff)
+{
+	zval *object = getThis();
+	php_fdfs_t *i_obj;
+
+	i_obj = (php_fdfs_t *) zend_object_store_get_object(object TSRMLS_CC);
+	php_my_fdfs_modify_by_filebuff_impl( \
+		INTERNAL_FUNCTION_PARAM_PASSTHRU, &(i_obj->context));
+}
+
+/*
+boolean MyFastDFSClient::modify_by_callback(string my_appender_id,
+	array callback_array, long file_offset)
+return true for success, false for error
+*/
+PHP_METHOD(MyFastDFSClient, modify_by_callback)
+{
+	zval *object = getThis();
+	php_fdfs_t *i_obj;
+
+	i_obj = (php_fdfs_t *) zend_object_store_get_object(object TSRMLS_CC);
+	php_my_fdfs_modify_by_callback_impl( \
+		INTERNAL_FUNCTION_PARAM_PASSTHRU, &(i_obj->context));
+}
+
+/*
 long MyFastDFSClient::get_last_error_no()
 return last error no
 */
@@ -1109,6 +1480,39 @@ ZEND_ARG_INFO(0, file_offset)
 ZEND_ARG_INFO(0, download_bytes)
 ZEND_END_ARG_INFO()
 
+ZEND_BEGIN_ARG_INFO_EX(arginfo_append_by_filename, 0, 0, 2)
+ZEND_ARG_INFO(0, my_appender_id)
+ZEND_ARG_INFO(0, local_filename)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_append_by_filebuff, 0, 0, 2)
+ZEND_ARG_INFO(0, my_appender_id)
+ZEND_ARG_INFO(0, file_buff)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_append_by_callback, 0, 0, 2)
+ZEND_ARG_INFO(0, my_appender_id)
+ZEND_ARG_INFO(0, callback_array)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_modify_by_filename, 0, 0, 3)
+ZEND_ARG_INFO(0, my_appender_id)
+ZEND_ARG_INFO(0, local_filename)
+ZEND_ARG_INFO(0, file_offset)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_modify_by_filebuff, 0, 0, 3)
+ZEND_ARG_INFO(0, my_appender_id)
+ZEND_ARG_INFO(0, file_buff)
+ZEND_ARG_INFO(0, file_offset)
+ZEND_END_ARG_INFO()
+
+ZEND_BEGIN_ARG_INFO_EX(arginfo_modify_by_callback, 0, 0, 3)
+ZEND_ARG_INFO(0, my_appender_id)
+ZEND_ARG_INFO(0, callback_array)
+ZEND_ARG_INFO(0, file_offset)
+ZEND_END_ARG_INFO()
+
 /* {{{ my_fdfs_class_methods */
 #define MY_FDFS_ME(name, args) PHP_ME(MyFastDFSClient, name, args, ZEND_ACC_PUBLIC)
 static zend_function_entry my_fdfs_class_methods[] = {
@@ -1127,6 +1531,12 @@ static zend_function_entry my_fdfs_class_methods[] = {
     MY_FDFS_ME(download_file_to_buff,       arginfo_download_file_to_buff)
     MY_FDFS_ME(download_file_to_file,       arginfo_download_file_to_file)
     MY_FDFS_ME(download_file_to_callback,   arginfo_download_file_to_callback)
+    MY_FDFS_ME(append_by_filename,     arginfo_append_by_filename)
+    MY_FDFS_ME(append_by_filebuff,     arginfo_append_by_filebuff)
+    MY_FDFS_ME(append_by_callback,     arginfo_append_by_callback)
+    MY_FDFS_ME(modify_by_filename,     arginfo_modify_by_filename)
+    MY_FDFS_ME(modify_by_filebuff,     arginfo_modify_by_filebuff)
+    MY_FDFS_ME(modify_by_callback,     arginfo_modify_by_callback)
     { NULL, NULL, NULL }
 };
 #undef MY_FDFS_ME
