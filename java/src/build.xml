@@ -1,0 +1,59 @@
+<?xml version="1.0"?>
+
+<!-- obfuscate -->
+<project name="my_fastdfs_client" default="jar" basedir=".">
+
+  <target name="init">
+	    <!-- The root directory of the workspace -->
+	    <property name="my_fastdfs_client.home" value="."/>
+	    <property name="my_fastdfs_client.lib" value="../lib"/>
+	    
+	    <!-- The destination directory for the build -->
+	    <property name="my_fastdfs_client.build" value="${my_fastdfs_client.home}/build"/>
+
+      <!-- The source directory for the build -->
+	    <property name="my_fastdfs_client.src" value="${my_fastdfs_client.home}"/>
+	
+	    <!-- The classpath used for building the workspace. -->
+	    <property name="my_fastdfs_client.classpath" value="${my_fastdfs_client.lib}/fastdfs_client.jar;${my_fastdfs_client.lib}/fastdht_client.jar"/>
+
+	    <!-- The destination directory for all the compiled classes. -->
+	    <property name="my_fastdfs_client.bin_dir" value="${my_fastdfs_client.build}/classes"/>
+	
+      <!-- The classpath used for building the workspace. -->
+      <property name="jar" value="${my_fastdfs_client.build}/my_fastdfs_client.jar"/>
+  </target>
+
+  <target name="compile" depends="init">
+    <mkdir dir="${my_fastdfs_client.bin_dir}"/>
+    <javac srcdir="${my_fastdfs_client.src}"
+           destdir="${my_fastdfs_client.bin_dir}"
+           classpath="${my_fastdfs_client.classpath}"
+           includes="org/**/*.java"
+           debug="on"
+           encoding="ISO8859-1"
+           failonerror="true"/>
+  </target>
+  
+  <target name="components" depends="init">
+  </target>
+  
+  <!-- create .jar -->
+    <target name="jar" depends="compile">
+            <jar jarfile="${jar}"
+                    basedir="${my_fastdfs_client.bin_dir}"
+                    includes="org/csource/**">
+              <fileset dir="${my_fastdfs_client.src}">
+                <include name="*.conf"/>
+              </fileset>
+            </jar>
+    </target>
+
+  <target name="clean" depends="init">
+  	<delete dir="${my_fastdfs_client.build}"/>
+  </target>
+    
+  <!--<target name="core" depends="compile, components"/>-->
+  <target name="core" depends="compile"/>
+  
+</project>
