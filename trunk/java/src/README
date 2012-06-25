@@ -1,0 +1,17 @@
+Copyright (C) 2012 Happy Fish / YuQing
+
+FastDFS Java Client API may be copied only under the terms of 
+the BSD license.
+Please visit the FastDFS Home Page for more detail.
+English language: http://english.csource.org/
+Chinese language: http://www.csource.org/
+
+
+The jar file is compiled by JDK1.6, you can download the last version 
+from google code: http://code.google.com/p/my-fastdfs-client/downloads/list
+
+run the FastDFS Java Client test:
+java -cp <my_fastdfs_client_jar_filename> org.csource.my-fastdfs-client.MyFDFSClientTest
+
+eg.:
+java -cp my_fastdfs_client_v1.00.jar org.csource.myfastdfs.MyFDFSClientTest
