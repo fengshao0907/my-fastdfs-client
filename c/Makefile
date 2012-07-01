@@ -15,7 +15,7 @@ MY_SHARED_OBJS = my_fdfs_client.lo
 
 MY_HEADER_FILES = my_fdfs_client.h
 
-ALL_OBJS = $(MY_STATIC_OBJS) $(MY_SHARED_OBJS)
+ALL_OBJS = $(MY_STATIC_OBJS) $(MY_SHARED_OBJS) my_fdfs_client_test.o
 
 ALL_PRGS = my_fdfs_client_test
 

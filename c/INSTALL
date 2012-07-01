@@ -1,0 +1,28 @@
+Copy right 2012 Happy Fish / YuQing
+
+my-fastdfs-client may be copied only under the terms of 
+the Less GNU General Public License (LGPL).
+Please visit the FastDFS Home Page for more detail.
+English language: http://english.csource.org/
+Chinese language: http://www.csource.org/
+
+#step 1. download FastDFS server v3.08 and FastDHT server v1.20 
+         then install them
+
+#step 2. download my-fastdfs-client source package and unpack it, 
+tar xzf my-fastdfs-client_c_v1.x.tar.gz
+#for example:
+tar xzf my-fastdfs-client_c_v1.00.tar.gz
+
+#step 3. enter the my-fastdfs-client dir
+cd my-fastdfs-client
+
+#step 4. make
+make
+
+#step 5. make install
+make install
+
+#step 6. run test program
+/usr/local/bin/my_fdfs_client_test
+
