@@ -14,7 +14,11 @@ my_fastdfs_client.fdht_config_filename# point to the FastDHT client config
 filename. Please read FastDFS and FastDHT INSTALL files to know about how to
 config FastDFS and FastDHT client.
 
+
 MyFastDFSClient php extension compiled under PHP 5.2.x, Steps:
+
+install FastDFS v3.08 and FastDHT v1.20 client library
+
 phpize
 ./configure
 make
