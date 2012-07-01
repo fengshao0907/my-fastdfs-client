@@ -1922,7 +1922,7 @@ static int load_config_files()
 		}
 	}
 
-	//logInfo("base_path=%s, cluster_count=%d", g_fdfs_base_path, config_count);
+	logDebug("base_path=%s, cluster_count=%d", g_fdfs_base_path, config_count);
 	return 0;
 }
 
