@@ -11,7 +11,7 @@ The jar file is compiled by JDK1.6, you can download the last version
 from google code: http://code.google.com/p/my-fastdfs-client/downloads/list
 
 run the FastDFS Java Client test:
-java -cp <my_fastdfs_client_jar_filename> org.csource.my-fastdfs-client.MyFDFSClientTest
+java -cp <my_fastdfs_client_and_dependency_jar_filename> org.csource.my-fastdfs-client.MyFDFSClientTest
 
-eg.:
-java -cp my_fastdfs_client_v1.00.jar org.csource.myfastdfs.MyFDFSClientTest
+eg. in windows:
+java -cp my_fastdfs_client.jar;fastdfs_client.jar;fastdht_client.jar org.csource.myfastdfs.MyFDFSClientTest

@@ -229,7 +229,6 @@ public class MyFastDFSClient
 	/**
 	* upload file to storage server (by callback object)
   * @param my_file_id the file id specified by application
-	* @param group_name the group name to upload file to, can be empty
 	* @param file_size the file size
 	* @param callback the write data callback object
 	* @param file_ext_name file ext name, do not include dot(.), null to extract ext name from the local filename
@@ -355,7 +354,6 @@ public class MyFastDFSClient
 	/**
 	* upload appender file to storage server (by callback object)
   * @param my_appender_id the appender file id specified by application
-	* @param group_name the group name to upload appender file to, can be empty
 	* @param file_size the file size
 	* @param callback the write data callback object
 	* @param file_ext_name file ext name, do not include dot(.), null to extract ext name from the local filename
@@ -526,7 +524,8 @@ public class MyFastDFSClient
 	/**
 	* modify appender file (by callback object)
   * @param my_appender_id the file id specified by application
-	* @param file_size the file size
+  * @param file_offset the offset of appender file
+	* @param modify_size the modified / content size
 	* @param callback the write data callback object
 	* @return 0 for success, != 0 for error (error no)
 	*/
