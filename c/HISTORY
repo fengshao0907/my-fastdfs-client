@@ -1,4 +1,7 @@
 
+Version 1.01  2012-08-13
+ * Makefile correct macro STATIC_OBJS to MY_STATIC_OBJS
+
 Version 1.00  2012-07-01
  * first version with FastDFS server v3.08 and FastDHT server v1.20
 
