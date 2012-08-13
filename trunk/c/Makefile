@@ -34,9 +34,9 @@ libmyfdfsclient.a:
 my_fdfs_client_test: my_fdfs_client_test.o
 	$(COMPILE) -o $@ $< $(LIB_PATH) -L. -lfastcommon -lfdfsclient -lfdhtclient $(MY_STATIC_OBJS)
 .o:
-	$(COMPILE) -o $@ $<  $(STATIC_OBJS) $(LIB_PATH) $(INC_PATH)
+	$(COMPILE) -o $@ $<  $(MY_STATIC_OBJS) $(LIB_PATH) $(INC_PATH)
 .c:
-	$(COMPILE) -o $@ $<  $(STATIC_OBJS) $(LIB_PATH) $(INC_PATH)
+	$(COMPILE) -o $@ $<  $(MY_STATIC_OBJS) $(LIB_PATH) $(INC_PATH)
 .c.o:
 	$(COMPILE) -c -o $@ $<  $(INC_PATH)
 .c.lo:
