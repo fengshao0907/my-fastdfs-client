@@ -111,8 +111,8 @@ int my_fdfs_upload_by_filename_ex(MyClientContext *pContext, \
 	char new_group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	char remote_filename[128];
 	char *p;
-	TrackerServerInfo *pTrackerServer;
-	TrackerServerInfo *pStorageServer = NULL;
+	ConnectionInfo *pTrackerServer;
+	ConnectionInfo *pStorageServer = NULL;
 	int value_len;
 	int result;
 
@@ -175,8 +175,8 @@ int my_fdfs_do_upload_file(MyClientContext *pContext, const char *my_file_id, \
 	char new_group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	char remote_filename[128];
 	char *p;
-	TrackerServerInfo *pTrackerServer;
-	TrackerServerInfo *pStorageServer = NULL;
+	ConnectionInfo *pTrackerServer;
+	ConnectionInfo *pStorageServer = NULL;
 	const char *master_filename = NULL;
 	const char *prefix_name = NULL;
 	int value_len;
@@ -243,8 +243,8 @@ int my_fdfs_upload_by_callback_ex(MyClientContext *pContext, \
 	char new_group_name[FDFS_GROUP_NAME_MAX_LEN + 1];
 	char remote_filename[128];
 	char *p;
-	TrackerServerInfo *pTrackerServer;
-	TrackerServerInfo *pStorageServer = NULL;
+	ConnectionInfo *pTrackerServer;
+	ConnectionInfo *pStorageServer = NULL;
 	int value_len;
 	int result;
 
@@ -302,8 +302,8 @@ int my_fdfs_delete_file(MyClientContext *pContext, const char *my_file_id)
 	FDHTKeyInfo keyInfo;
 	char fdfs_file_id[FDFS_GROUP_NAME_MAX_LEN + 128];
 	char *p;
-	TrackerServerInfo *pTrackerServer;
-	TrackerServerInfo *pStorageServer = NULL;
+	ConnectionInfo *pTrackerServer;
+	ConnectionInfo *pStorageServer = NULL;
 	int result;
 	int value_len;
 
@@ -358,8 +358,8 @@ int my_fdfs_do_download_file_ex(MyClientContext *pContext, \
 		char **file_buff, void *arg, int64_t *file_size)
 {
 	char fdfs_file_id[FDFS_GROUP_NAME_MAX_LEN + 128]; \
-	TrackerServerInfo *pTrackerServer;
-	TrackerServerInfo *pStorageServer = NULL;
+	ConnectionInfo *pTrackerServer;
+	ConnectionInfo *pStorageServer = NULL;
 	int result;
 
 	if ((result=my_fdfs_get_file_id(pContext, my_file_id, fdfs_file_id, \
@@ -380,8 +380,8 @@ int my_fdfs_download_file_to_file(MyClientContext *pContext, \
 		int64_t *file_size)
 {
 	char fdfs_file_id[FDFS_GROUP_NAME_MAX_LEN + 128]; \
-	TrackerServerInfo *pTrackerServer;
-	TrackerServerInfo *pStorageServer = NULL;
+	ConnectionInfo *pTrackerServer;
+	ConnectionInfo *pStorageServer = NULL;
 	int result;
 
 	if ((result=my_fdfs_get_file_id(pContext, my_file_id, fdfs_file_id, \
@@ -401,8 +401,8 @@ int my_fdfs_download_file_ex(MyClientContext *pContext, const char *my_file_id, 
 		DownloadCallback callback, void *arg, int64_t *file_size)
 {
 	char fdfs_file_id[FDFS_GROUP_NAME_MAX_LEN + 128]; \
-	TrackerServerInfo *pTrackerServer;
-	TrackerServerInfo *pStorageServer = NULL;
+	ConnectionInfo *pTrackerServer;
+	ConnectionInfo *pStorageServer = NULL;
 	int result;
 
 	if ((result=my_fdfs_get_file_id(pContext, my_file_id, fdfs_file_id, \
@@ -423,8 +423,8 @@ int my_fdfs_append_by_filename(MyClientContext *pContext, \
 		const char *local_filename)
 {
 	char fdfs_file_id[FDFS_GROUP_NAME_MAX_LEN + 128]; \
-	TrackerServerInfo *pTrackerServer;
-	TrackerServerInfo *pStorageServer = NULL;
+	ConnectionInfo *pTrackerServer;
+	ConnectionInfo *pStorageServer = NULL;
 	int result;
 
 	if ((result=my_fdfs_get_file_id(pContext, my_appender_file_id, \
@@ -444,8 +444,8 @@ int my_fdfs_append_by_filebuff(MyClientContext *pContext, \
 		const char *file_buff, const int64_t file_size)
 {
 	char fdfs_file_id[FDFS_GROUP_NAME_MAX_LEN + 128]; \
-	TrackerServerInfo *pTrackerServer;
-	TrackerServerInfo *pStorageServer = NULL;
+	ConnectionInfo *pTrackerServer;
+	ConnectionInfo *pStorageServer = NULL;
 	int result;
 
 	if ((result=my_fdfs_get_file_id(pContext, my_appender_file_id, \
@@ -465,8 +465,8 @@ int my_fdfs_append_by_callback(MyClientContext *pContext, \
 		UploadCallback callback, void *arg, const int64_t file_size)
 {
 	char fdfs_file_id[FDFS_GROUP_NAME_MAX_LEN + 128]; \
-	TrackerServerInfo *pTrackerServer;
-	TrackerServerInfo *pStorageServer = NULL;
+	ConnectionInfo *pTrackerServer;
+	ConnectionInfo *pStorageServer = NULL;
 	int result;
 
 	if ((result=my_fdfs_get_file_id(pContext, my_appender_file_id, \
@@ -486,8 +486,8 @@ int my_fdfs_modify_by_filename(MyClientContext *pContext, \
 		const char *local_filename, const int64_t file_offset)
 {
 	char fdfs_file_id[FDFS_GROUP_NAME_MAX_LEN + 128]; \
-	TrackerServerInfo *pTrackerServer;
-	TrackerServerInfo *pStorageServer = NULL;
+	ConnectionInfo *pTrackerServer;
+	ConnectionInfo *pStorageServer = NULL;
 	int result;
 
 	if ((result=my_fdfs_get_file_id(pContext, my_appender_file_id, \
@@ -507,8 +507,8 @@ int my_fdfs_modify_by_filebuff(MyClientContext *pContext, \
 		const int64_t file_offset, const int64_t file_size)
 {
 	char fdfs_file_id[FDFS_GROUP_NAME_MAX_LEN + 128]; \
-	TrackerServerInfo *pTrackerServer;
-	TrackerServerInfo *pStorageServer = NULL;
+	ConnectionInfo *pTrackerServer;
+	ConnectionInfo *pStorageServer = NULL;
 	int result;
 
 	if ((result=my_fdfs_get_file_id(pContext, my_appender_file_id, \
@@ -529,8 +529,8 @@ int my_fdfs_modify_by_callback(MyClientContext *pContext, \
 		const int64_t file_offset, const int64_t file_size)
 {
 	char fdfs_file_id[FDFS_GROUP_NAME_MAX_LEN + 128]; \
-	TrackerServerInfo *pTrackerServer;
-	TrackerServerInfo *pStorageServer = NULL;
+	ConnectionInfo *pTrackerServer;
+	ConnectionInfo *pStorageServer = NULL;
 	int result;
 
 	if ((result=my_fdfs_get_file_id(pContext, my_appender_file_id, \
@@ -549,8 +549,8 @@ int my_fdfs_truncate_file(MyClientContext *pContext, \
 	const char *my_appender_file_id, const int64_t truncated_file_size)
 {
 	char fdfs_file_id[FDFS_GROUP_NAME_MAX_LEN + 128]; \
-	TrackerServerInfo *pTrackerServer;
-	TrackerServerInfo *pStorageServer = NULL;
+	ConnectionInfo *pTrackerServer;
+	ConnectionInfo *pStorageServer = NULL;
 	int result;
 
 	if ((result=my_fdfs_get_file_id(pContext, my_appender_file_id, \
@@ -570,8 +570,8 @@ int my_fdfs_query_file_info_ex(MyClientContext *pContext, \
 		const bool bSilence)
 {
 	char fdfs_file_id[FDFS_GROUP_NAME_MAX_LEN + 128]; \
-	TrackerServerInfo *pTrackerServer;
-	TrackerServerInfo *pStorageServer = NULL;
+	ConnectionInfo *pTrackerServer;
+	ConnectionInfo *pStorageServer = NULL;
 	int result;
 
 	if ((result=my_fdfs_get_file_id(pContext, my_file_id, \
@@ -605,8 +605,8 @@ int my_fdfs_get_file_info_ex(MyClientContext *pContext, \
 int my_fdfs_file_exist(MyClientContext *pContext, const char *my_file_id)
 {
 	char fdfs_file_id[FDFS_GROUP_NAME_MAX_LEN + 128]; \
-	TrackerServerInfo *pTrackerServer;
-	TrackerServerInfo *pStorageServer = NULL;
+	ConnectionInfo *pTrackerServer;
+	ConnectionInfo *pStorageServer = NULL;
 	int result;
 
 	if ((result=my_fdfs_get_file_id(pContext, my_file_id, \
