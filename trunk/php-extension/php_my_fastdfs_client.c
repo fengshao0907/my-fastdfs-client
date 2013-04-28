@@ -1783,7 +1783,7 @@ PHP_MY_FASTDFS_API zend_class_entry *php_fdfs_get_exception_base(int root TSRMLS
 #endif
 }
 
-static int load_cluster_item_value(const char *item_name_prefix, \
+static int load_cluster_item_value(char *item_name_prefix, \
 	const int index, zval *value)
 {
 	char szItemName[64];

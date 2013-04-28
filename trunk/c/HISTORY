@@ -1,4 +1,7 @@
 
+Version 1.02  2013-04-28
+ remove php client compile warning info
+
 Version 1.01  2013-03-02
  * Makefile correct macro STATIC_OBJS to MY_STATIC_OBJS
  * upgrade FastDFS server to v4.06 and FastDHT to v1.22
