@@ -1,0 +1,1 @@
+my FastDFS client can use file id specified by application
